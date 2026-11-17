@@ -6,6 +6,9 @@ $env:TMP = "D:\opencode-temp"
 
 $repo = Split-Path -Parent $PSScriptRoot
 $base = "http://127.0.0.1:8080"
+Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue |
+  ForEach-Object { taskkill /T /F /PID $_.OwningProcess 2>&1 | Out-Null }
+Start-Sleep -Seconds 2
 if (Test-Path -LiteralPath "$repo\.wrangler\state") { Remove-Item -LiteralPath "$repo\.wrangler\state" -Recurse -Force }
 
 function Check([string]$name, [bool]$condition) {
