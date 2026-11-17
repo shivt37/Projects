@@ -36,18 +36,42 @@ window.GlyphBadgeComposer.matchVisualWeight5=run;
 window.GlyphBadgeComposer.Engine5=F;
 
 // ---- Canvas bridge: run Engine 5.0 directly on selected canvas layers ----
+function domMatrixArray(m){return m?[m.a,m.b,m.c,m.d,m.e,m.f]:null;}
+function renderedTextParts(layer,M){
+  const stage=document.querySelector('#bcCanvasLayers');if(!stage)return [];
+  const wrap=[...stage.querySelectorAll('[data-layer-id]')].find(n=>n.getAttribute('data-layer-id')===layer.id);
+  if(!wrap)return [];
+  const out=[],skip=el=>el.closest('defs,metadata,[data-gsp-overlay],[data-gsp-thin-stroke-overlay],.bc-selected-outline,.bc-handle,.bc-transform-handle');
+  let wrapCTM;try{wrapCTM=wrap.getCTM();}catch(_){return [];}
+  if(!wrapCTM)return [];
+  const invWrap=E.matInv(domMatrixArray(wrapCTM));if(!invWrap)return [];
+  for(const node of wrap.querySelectorAll('path')){
+    if(skip(node))continue;
+    const d=node.getAttribute('d');if(!d)continue;
+    let nodeCTM;try{nodeCTM=node.getCTM();}catch(_){continue;}
+    if(!nodeCTM)continue;
+    const rel=E.matMul(invWrap,domMatrixArray(nodeCTM)),world=E.matMul(M,rel);
+    let rings;try{rings=E.parsePath(d,0.004);}catch(_){continue;}
+    const pts=rings.map(r=>r.map(p=>E.matApply(world,p[0],p[1])));
+    E.ringsToPolys(pts).forEach((poly,k)=>out.push({layerId:layer.id,poly,sub:'text-'+out.length+'-'+k,referenceOnly:true}));
+  }
+  return out;
+}
 function canvasParts(){
   const G=window.GlyphBadgeComposer,out=[],seen=new Set();
   const walk=layer=>{
     if(layer.type==='group'){(layer.children||[]).forEach(walk);return;}
-    if(layer.type!=='path'||!layer.d)return;
     if(!G.isLayerUsable(layer.id))return;
     if(seen.has(layer.id))return;seen.add(layer.id);
     const m=G.getLayerWorldMatrix(layer.id);if(!m)return;
     const M=[m.a,m.b,m.c,m.d,m.e,m.f];
-    let rings;try{rings=E.parsePath(layer.d,0.004);}catch(_){return;}
-    const world=rings.map(r=>r.map(p=>E.matApply(M,p[0],p[1])));
-    E.ringsToPolys(world).forEach((poly,k)=>out.push({layerId:layer.id,poly,sub:k}));
+    if(layer.type==='path'&&layer.d){
+      let rings;try{rings=E.parsePath(layer.d,0.004);}catch(_){return;}
+      const world=rings.map(r=>r.map(p=>E.matApply(M,p[0],p[1])));
+      E.ringsToPolys(world).forEach((poly,k)=>out.push({layerId:layer.id,poly,sub:k}));
+      return;
+    }
+    if(layer.type==='text')out.push(...renderedTextParts(layer,M));
   };
   G.getSelectedLayerIds().forEach(id=>{const l=G.getLiveLayer(id);if(l)walk(l);});
   return out;
@@ -57,9 +81,13 @@ function matchCanvas(){
   const parts=canvasParts();
   if(!parts.length)return{ok:false,reason:'Select measurable path layers (the ★ Key Object and the targets).'};
   const refs=parts.filter(p=>G.isKeyLayerOrDescendant(p.layerId));
-  const tgts=parts.filter(p=>!G.isKeyLayerOrDescendant(p.layerId));
-  if(!refs.length)return{ok:false,reason:'The ★ Key Object must be selected.'};
-  if(!tgts.length)return{ok:false,reason:'Select target layers in addition to the ★ Key Object.'};
+  const tgts=parts.filter(p=>!G.isKeyLayerOrDescendant(p.layerId)&&!p.referenceOnly);
+  if(!refs.length){
+    const keyId=G.getKeyObjectId&&G.getKeyObjectId(),keySelected=keyId&&G.getSelectedLayerIds().includes(keyId);
+    if(keySelected)return{ok:false,reason:'The ★ Key Object has no measurable outlines. Enable path rendering with an imported font, or use a path layer as the key.'};
+    return{ok:false,reason:'The ★ Key Object must be selected.'};
+  }
+  if(!tgts.length)return{ok:false,reason:'Select target path layers. Text layers can be references only; they cannot be rewritten by Engine 5.1.'};
   const ref=F.referenceByRole(refs.map(p=>p.poly),0.06);
   if(!ref||!F.roleKeys(ref).length)return{ok:false,reason:'the reference has no measurable stroke roles'};
   const biasInput=document.querySelector('#e5Bias'),bias=biasInput?(parseFloat(biasInput.value)||0)/100:0;
