@@ -7,10 +7,10 @@ $env:TMP = "D:\opencode-temp"
 $repo = Split-Path -Parent $PSScriptRoot
 $base = "http://127.0.0.1:8080"
 Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue |
-  ForEach-Object { taskkill /T /F /PID $_.OwningProcess 2>$null | Out-Null }
+  ForEach-Object { try { taskkill /T /F /PID $_.OwningProcess 2>$null | Out-Null } catch {} }
 Get-CimInstance Win32_Process -Filter "name='node.exe'" |
   Where-Object { $_.CommandLine -match 'wrangler|miniflare' } |
-  ForEach-Object { taskkill /F /PID $_.ProcessId 2>$null | Out-Null }
+  ForEach-Object { try { taskkill /F /PID $_.ProcessId 2>$null | Out-Null } catch {} }
 Start-Sleep -Seconds 2
 if (Test-Path -LiteralPath "$repo\.wrangler\state") { Remove-Item -LiteralPath "$repo\.wrangler\state" -Recurse -Force }
 
@@ -109,5 +109,6 @@ try {
   Check "working tree clean after commits" ([string]::IsNullOrWhiteSpace(($gitStatus | Out-String)))
 
 } finally {
-  if ($proc -and !$proc.HasExited) { taskkill /T /F /PID $proc.Id 2>$null | Out-Null }
+  if ($proc -and !$proc.HasExited) { try { taskkill /T /F /PID $proc.Id 2>$null | Out-Null } catch {} }
 }
+
