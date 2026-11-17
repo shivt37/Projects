@@ -5,64 +5,92 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#050508">
 <title>Projects Gateway</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2306b6d4'/><g stroke='white' stroke-width='6' stroke-linecap='round'><line x1='20' y1='22' x2='44' y2='22'/><line x1='20' y1='32' x2='44' y2='32'/><line x1='20' y1='42' x2='36' y2='42'/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <header class="app-header">
-  <div class="brand"><div class="mark" aria-hidden="true">P</div><div><h1 id="app-title">Projects Gateway</h1><p class="sub">Your projects, one place</p></div></div>
+  <button class="btn-icon" id="menuBtn" type="button" title="Groups" aria-label="Open groups menu" aria-expanded="false" aria-controls="drawer">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <div class="brand">
+    <div class="mark" aria-hidden="true">P</div>
+    <div><h1 id="app-title">Projects Gateway</h1><p class="sub">Your projects, one place</p></div>
+  </div>
   <div class="header-actions">
-    <button type="button" id="add-group" class="ghost">Add group</button>
-    <button type="button" id="add-project" class="primary">Add project</button>
-    <button type="button" id="save" class="primary">Save changes</button>
-    <form method="post" action="/logout"><button type="submit" class="ghost">Sign out</button></form>
+    <button type="button" id="add-group" class="secondary">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Group</span>
+    </button>
+    <button type="button" id="add-project" class="primary">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Project</span>
+    </button>
+    <button type="button" id="save" class="btn-save">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <span>Save</span>
+    </button>
+    <div class="accent-popup-wrap">
+      <button type="button" id="accentBtn" class="btn-icon" title="Accent colour" aria-label="Accent colour" aria-expanded="false" aria-controls="accent-popup">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2a10 10 0 0 0 0 20c.8 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.5-1.1-.3-.3-.5-.7-.5-1.1 0-.8.7-1.5 1.5-1.5H16a6 6 0 0 0 6-6c0-5-4.5-9-10-9z"/></svg>
+      </button>
+      <div class="accent-popup" id="accent-popup" role="radiogroup" aria-label="Accent colour" hidden></div>
+    </div>
   </div>
 </header>
 
+<dialog id="drawer" class="drawer" aria-label="Project groups">
+  <div class="drawer-sheet">
+    <div class="drawer-head"><strong>Groups</strong><button type="button" id="drawer-close" aria-label="Close menu" autofocus>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button></div>
+    <nav id="drawer-nav"></nav>
+  </div>
+</dialog>
+
 <div class="shell">
-  <aside class="sidebar" aria-label="Project groups">
-    <nav id="group-nav"></nav>
-  </aside>
+  <aside class="sidebar" aria-label="Project groups"><nav id="group-nav"></nav></aside>
   <main class="content">
     <div class="content-head"><h2 id="section-title">All projects</h2><span id="count" class="pill">0</span></div>
     <section id="cards" class="card-grid" aria-label="Projects"></section>
   </main>
 </div>
 
-<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="status" class="toast" role="status" aria-live="polite"></p>
 
-<dialog id="group-dialog" aria-labelledby="group-title">
+<dialog id="group-dialog" class="confirm-modal" closedby="any" aria-labelledby="group-title">
   <h2 id="group-title">Add group</h2>
   <form id="group-form" method="dialog">
     <div class="field">
-      <label for="group-name">Group name <span aria-hidden="true">*</span></label>
-      <input type="text" id="group-name" name="group-name" maxlength="80" required aria-invalid="false" aria-describedby="group-hint" data-error="group-error">
+      <label class="field-label" for="group-name">Group name <span aria-hidden="true">*</span></label>
       <span id="group-hint" class="hint">A short label for the sidebar.</span>
+      <input type="text" id="group-name" name="group-name" maxlength="80" required aria-invalid="false" aria-describedby="group-hint" data-error="group-error">
       <div id="group-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Enter a group name.</div>
     </div>
-    <div class="dialog-actions"><button type="button" data-close class="ghost">Cancel</button><button type="submit" class="primary">Add group</button></div>
+    <div class="confirm-actions"><button type="button" data-close class="secondary" autofocus>Cancel</button><button type="submit" class="primary">Add group</button></div>
   </form>
 </dialog>
 
-<dialog id="project-dialog" aria-labelledby="project-title">
+<dialog id="project-dialog" class="confirm-modal project-dialog" closedby="any" aria-labelledby="project-title">
   <h2 id="project-title">Add project</h2>
   <form id="project-form" method="dialog">
     <div class="field">
-      <label for="p-name">Name <span aria-hidden="true">*</span></label>
-      <input type="text" id="p-name" name="name" maxlength="120" required aria-invalid="false" aria-describedby="p-name-hint" data-error="p-name-error">
+      <label class="field-label" for="p-name">Name <span aria-hidden="true">*</span></label>
       <span id="p-name-hint" class="hint">Display name on the card.</span>
+      <input type="text" id="p-name" name="name" maxlength="120" required aria-invalid="false" aria-describedby="p-name-hint" data-error="p-name-error">
       <div id="p-name-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Enter a name.</div>
     </div>
     <div class="field">
-      <label for="p-slug">URL slug <span aria-hidden="true">*</span></label>
+      <label class="field-label" for="p-slug">URL slug <span aria-hidden="true">*</span></label>
+      <span id="p-slug-hint" class="hint">Lowercase letters, digits, hyphen or underscore. Opens at /p/&lt;slug&gt;.</span>
       <input type="text" id="p-slug" name="slug" maxlength="64" pattern="[a-z0-9][a-z0-9-_]{0,63}" required aria-invalid="false" aria-describedby="p-slug-hint" data-error="p-slug-error" spellcheck="false" autocapitalize="off" autocorrect="off">
-      <span id="p-slug-hint" class="hint">Lowercase letters, digits, hyphen or underscore. Open at /p/&lt;slug&gt;.</span>
       <div id="p-slug-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Use lowercase letters, digits, - or _.</div>
     </div>
     <div class="field">
-      <label for="p-group">Group</label>
+      <label class="field-label" for="p-group">Group</label>
       <select id="p-group" name="group"></select>
     </div>
     <fieldset>
@@ -73,32 +101,30 @@
       </div>
     </fieldset>
     <div class="field" data-when="repo">
-      <label for="p-path">GitHub path <span aria-hidden="true">*</span></label>
-      <input type="text" id="p-path" name="assetPath" maxlength="500" required aria-invalid="false" aria-describedby="p-path-hint" data-error="p-path-error" spellcheck="false" autocapitalize="off" autocorrect="off">
+      <label class="field-label" for="p-path">GitHub path <span aria-hidden="true">*</span></label>
       <span id="p-path-hint" class="hint">Relative to public/, e.g. projects/site/ or projects/page.html.</span>
+      <input type="text" id="p-path" name="assetPath" maxlength="500" required aria-invalid="false" aria-describedby="p-path-hint" data-error="p-path-error" spellcheck="false" autocapitalize="off" autocorrect="off">
       <div id="p-path-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Enter a repo path.</div>
     </div>
     <div class="field" data-when="repo">
-      <label for="p-entry">Entry file <span class="optional">(optional)</span></label>
+      <label class="field-label" for="p-entry">Entry file <span class="optional">(optional)</span></label>
       <input type="text" id="p-entry" name="entry" maxlength="200" placeholder="index.html" spellcheck="false" autocapitalize="off" autocorrect="off">
-      <span class="hint">Default is index.html when the path is a folder.</span>
     </div>
     <div class="field" data-when="external">
-      <label for="p-url">External URL <span aria-hidden="true">*</span></label>
-      <input type="url" id="p-url" name="url" maxlength="2000" aria-invalid="false" aria-describedby="p-url-hint" data-error="p-url-error" spellcheck="false" autocapitalize="off" autocorrect="off">
+      <label class="field-label" for="p-url">External URL <span aria-hidden="true">*</span></label>
       <span id="p-url-hint" class="hint">https://example.com</span>
+      <input type="url" id="p-url" name="url" maxlength="2000" aria-invalid="false" aria-describedby="p-url-hint" data-error="p-url-error" spellcheck="false" autocapitalize="off" autocorrect="off">
       <div id="p-url-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Enter a valid URL.</div>
     </div>
     <div class="field" data-when="repo">
-      <label for="p-extra-url">Extra link <span class="optional">(optional)</span></label>
-      <input type="url" id="p-extra-url" name="extraUrl" maxlength="2000" placeholder="https://google.com">
-      <span class="hint">Shown beside this project's card, e.g. a source repo or another site.</span>
+      <label class="field-label" for="p-extra-url">Extra link <span class="optional">(optional)</span></label>
+      <input type="url" id="p-extra-url" name="extraUrl" maxlength="2000" placeholder="https://example.com">
     </div>
     <div class="field">
-      <label for="p-link-label">Link label <span class="optional">(optional)</span></label>
+      <label class="field-label" for="p-link-label">Link label <span class="optional">(optional)</span></label>
       <input type="text" id="p-link-label" name="linkLabel" maxlength="80" placeholder="Open link">
     </div>
-    <label class="check"><input type="checkbox" id="p-public" name="public"> Public — open /p/&lt;slug&gt; without the gateway PIN</label>
+    <label class="check"><input type="checkbox" id="p-public" name="public"> Public — open without the gateway PIN</label>
     <fieldset>
       <legend>Icon</legend>
       <div class="choice-row">
@@ -109,27 +135,27 @@
       </div>
     </fieldset>
     <div class="field" data-icon="upload" hidden>
-      <label for="p-icon-file">SVG file</label>
+      <label class="field-label" for="p-icon-file">SVG file</label>
       <input type="file" id="p-icon-file" name="iconFile" accept=".svg,image/svg+xml">
     </div>
     <div class="field" data-icon="url" hidden>
-      <label for="p-icon-url">SVG URL</label>
+      <label class="field-label" for="p-icon-url">SVG URL</label>
       <input type="url" id="p-icon-url" name="iconUrl" maxlength="2000" placeholder="https://example.com/icon.svg">
     </div>
     <div class="field" data-icon="inline" hidden>
-      <label for="p-icon-code">SVG code</label>
-      <textarea id="p-icon-code" name="iconCode" rows="4" spellcheck="false"></textarea>
-      <button type="button" id="random-icon" class="ghost">Generate random icon</button>
+      <label class="field-label" for="p-icon-code">SVG code</label>
+      <textarea id="p-icon-code" name="iconCode" rows="3" spellcheck="false"></textarea>
+      <button type="button" id="random-icon" class="secondary">Generate random icon</button>
     </div>
-    <div class="icon-preview"><img id="icon-preview" alt="" width="40" height="40" hidden></div>
-    <div class="dialog-actions"><button type="button" data-close class="ghost">Cancel</button><button type="button" id="delete-project" class="danger" hidden>Delete</button><button type="submit" class="primary">Save project</button></div>
+    <div class="icon-preview"><img id="icon-preview" alt="" width="20" height="20" hidden></div>
+    <div class="confirm-actions"><button type="button" data-close class="secondary">Cancel</button><button type="button" id="delete-project" class="danger" hidden>Delete</button><button type="submit" class="primary">Save project</button></div>
   </form>
 </dialog>
 
-<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+<dialog id="confirm-dialog" class="confirm-modal" closedby="any" aria-labelledby="confirm-title">
   <h2 id="confirm-title">Are you sure?</h2>
-  <p id="confirm-message"></p>
-  <div class="dialog-actions"><button type="button" id="confirm-cancel" class="ghost" autofocus>Cancel</button><button type="button" id="confirm-delete" class="danger">Delete</button></div>
+  <p id="confirm-message" class="confirm-body"></p>
+  <div class="confirm-actions"><button type="button" id="confirm-cancel" class="secondary" autofocus>Cancel</button><button type="button" id="confirm-delete" class="danger">Delete</button></div>
 </dialog>
 
 <script src="/app.js" defer></script>

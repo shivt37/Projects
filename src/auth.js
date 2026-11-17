@@ -144,18 +144,18 @@ export async function checkRateLimit(env, request) {
 
 const STYLE = `
 :root{--bg:#050508;--surface:#0c0c13;--surface2:#13131d;--border:#1b1b26;--border2:#262635;--text:#e8edf4;--dim:#a5aebc;--muted:#8a93a8;--accent:#06b6d4;--accent-dim:rgba(6,182,212,.10);--danger:#ff5f66;--r:9px;--r2:14px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-*{box-sizing:border-box}html{color-scheme:dark}body{margin:0;min-block-size:100dvh;background:radial-gradient(900px 500px at 50% -10%,var(--accent-dim),transparent 70%),var(--bg);color:var(--text);font-family:var(--font);display:grid;place-items:center;padding:var(--s4)}
-main{inline-size:min(100%,400px);background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--border2);border-radius:var(--r2);padding:var(--s5);box-shadow:0 18px 60px rgba(0,0,0,.45)}
-.brand{display:flex;align-items:center;gap:var(--s3);margin-block-end:var(--s5)}.mark{inline-size:38px;block-size:38px;display:grid;place-items:center;border-radius:10px;background:var(--accent);color:#021014;font-weight:800;font-size:18px}h1{font-size:1.15rem;margin:0;line-height:1.2}p.sub{margin:2px 0 0;color:var(--muted);font-size:.8rem}
-.field{display:flex;flex-direction:column;gap:6px;margin-block-end:var(--s4)}label{font-size:.82rem;color:var(--dim)}.hint{font-size:.75rem;color:var(--muted)}
+*{box-sizing:border-box}html{color-scheme:dark}body{margin:0;min-block-size:100dvh;background:radial-gradient(900px 500px at 50% -10%,var(--accent-dim),transparent 70%),var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.5;display:grid;place-items:center;padding:24px}
+main{inline-size:min(100%,320px);background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--border2);border-radius:var(--r2);padding:24px 22px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+.brand{display:flex;align-items:center;gap:var(--s3);margin-block-end:18px}.mark{inline-size:26px;block-size:26px;display:grid;place-items:center;border-radius:8px;background:var(--accent);color:#040507;font-weight:700;font-size:12px}h1{font-size:15px;font-weight:600;letter-spacing:.01em;margin:0 0 3px;line-height:1.2}p.sub{margin:0 0 18px;color:var(--dim);font-size:12px}
+.field{display:flex;flex-direction:column;gap:5px;margin-block-end:25px}label{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.02em}.hint{font-size:11px;color:var(--muted)}
 .pin-row{display:flex;gap:var(--s2);align-items:stretch}
-input[type=password]{font:inherit;font-size:max(1rem,1em);min-block-size:48px;padding:10px 12px;border-radius:var(--r);border:1px solid var(--border2);background:#0a0a11;color:var(--text);letter-spacing:.28em;text-align:center;flex:1 1 auto;min-inline-size:0}
-input[type=password]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}input:user-invalid{border-color:var(--danger);background:rgba(255,95,102,.06)}
-.error-msg{display:none;color:var(--danger);font-size:.8rem}.pin-row:has(input:user-invalid)+.error-msg{display:block}
-.check{display:flex;gap:var(--s2);align-items:center;color:var(--dim);font-size:.82rem;margin-block-end:var(--s4)}.check input{accent-color:var(--accent);inline-size:18px;block-size:18px}
-button{font:inherit;cursor:pointer;min-block-size:48px;border:0;border-radius:var(--r);background:var(--accent);color:#031216;font-weight:700;inline-size:100%}button:hover{filter:brightness(1.08)}button:focus-visible{outline:3px solid var(--text);outline-offset:2px}
-#toggle-pin{inline-size:auto;flex:0 0 auto;padding-inline:12px;background:transparent;color:var(--dim);border:1px solid var(--border2);font-size:.8rem}
-.alert{padding:10px 12px;border-radius:var(--r);background:var(--accent-dim);border:1px solid var(--border2);color:var(--dim);font-size:.8rem;margin-block-end:var(--s4)}
+input[type=password]{font:inherit;font-size:14px;min-block-size:44px;padding:8px 10px;border-radius:var(--r);border:1px solid var(--border2);background:#0a0a11;color:var(--text);letter-spacing:.18em;font-variant-numeric:tabular-nums;text-align:center;flex:1 1 auto;min-inline-size:0}
+input[type=password]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}input:user-invalid{border-color:var(--danger);background:rgba(255,95,102,.06)}
+.error-msg{display:none;color:var(--danger);font-size:12px}.pin-row:has(input:user-invalid)+.error-msg{display:block}
+.check{display:flex;gap:7px;align-items:center;color:var(--dim);font-size:12px;margin-block-end:14px}.check input{accent-color:var(--accent);inline-size:14px;block-size:14px}
+button{font:inherit;cursor:pointer;min-block-size:44px;padding:9px 16px;border:1px solid var(--accent);border-radius:var(--r);background:var(--accent);color:#040507;font-size:13px;font-weight:600;inline-size:100%}button:hover{filter:brightness(1.08)}button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#toggle-pin{inline-size:auto;flex:0 0 auto;padding:6px 10px;background:transparent;color:var(--dim);border-color:var(--border2);font-size:11px;font-weight:500}
+.alert{padding:8px 10px;border-radius:var(--r);background:var(--accent-dim);border:1px solid var(--border2);color:var(--dim);font-size:12px;margin-block-end:14px}
 .alert.error{border-color:rgba(255,95,102,.4);background:rgba(255,95,102,.10);color:#ffd9db}
 .visually-hidden{position:absolute!important;clip-path:inset(50%);overflow:hidden;inline-size:1px;block-size:1px;margin:-1px;padding:0;border:0;white-space:nowrap}
 `;
@@ -176,7 +176,7 @@ export function loginPageHtml(env, error = "") {
 <title>Sign in · Projects</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>${STYLE}</style>
 </head>
 <body>

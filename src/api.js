@@ -22,6 +22,13 @@ export function sanitizeSvg(svg) {
     .trim();
 }
 
+function normalizeSvgSize(svg) {
+  return svg.replace(/^<svg([^>]*)>/, (_match, attrs) => {
+    const cleaned = attrs.replace(/\s(?:width|height)="[^"]*"/g, "");
+    return `<svg${cleaned} width="24" height="24">`;
+  });
+}
+
 async function pickRandomIcon() {
   try {
     const collectionsResponse = await fetch(`${ICONIFY}/collections`);
@@ -45,7 +52,7 @@ async function pickRandomIcon() {
     const svgUrl = `${ICONIFY}/${prefix}/${name}.svg?color=%2306b6d4`;
     const svgResponse = await fetch(svgUrl);
     if (!svgResponse.ok) throw new Error(`iconify ${svgResponse.status}`);
-    const svgText = sanitizeSvg(await svgResponse.text());
+    const svgText = normalizeSvgSize(sanitizeSvg(await svgResponse.text()));
     if (!svgText.startsWith("<svg")) throw new Error("invalid svg");
     return {
       mode: "inline",

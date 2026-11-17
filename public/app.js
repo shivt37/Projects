@@ -1,4 +1,15 @@
 const DEFAULT_ICON = { mode: "iconify", id: "mdi:pencil", svgUrl: "https://api.iconify.design/mdi/pencil.svg", license: "Apache-2.0" };
+const FALLBACK_ICON_DATA = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 12h10M12 7v10"/></svg>')}`;
+const X_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+const ACCENT_STORAGE_KEY = "projects_accent";
+const ACCENT_COLORS = [
+  { name: 'Amber', hex: '#fb923c' }, { name: 'Gold', hex: '#f59e0b' },
+  { name: 'Rose', hex: '#f43f5e' }, { name: 'Magenta', hex: '#e63d64' },
+  { name: 'Sky Blue', hex: '#60a5fa' }, { name: 'Ice Blue', hex: '#38bdf8' },
+  { name: 'Indigo', hex: '#818cf8' }, { name: 'Violet', hex: '#5550f7' },
+  { name: 'Cyan', hex: '#06b6d4' }, { name: 'Emerald', hex: '#19be81' },
+  { name: 'Pure White', hex: '#e2e8f0' }, { name: 'Slate', hex: '#94a3b8' },
+];
 
 const state = { groups: [], projects: [] };
 let activeGroup = "all";
@@ -11,6 +22,9 @@ let dirty = false;
 const $ = (selector) => document.querySelector(selector);
 const cards = $("#cards");
 const nav = $("#group-nav");
+const drawerNav = $("#drawer-nav");
+const drawer = $("#drawer");
+const menuBtn = $("#menuBtn");
 const statusEl = $("#status");
 const projectDialog = $("#project-dialog");
 const groupDialog = $("#group-dialog");
@@ -32,6 +46,7 @@ function announce(message) {
 
 function markDirty() {
   dirty = true;
+  $("#save").classList.add("dirty");
 }
 
 function sanitizeSvg(svg) {
@@ -44,12 +59,16 @@ function sanitizeSvg(svg) {
 }
 
 function iconSrc(icon) {
-  if (!icon) return "";
-  if (icon.mode === "url") return icon.url || "";
+  if (!icon) return FALLBACK_ICON_DATA;
+  if (icon.mode === "url") return icon.url || FALLBACK_ICON_DATA;
   if (icon.mode === "inline" || icon.mode === "upload") {
-    return icon.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(icon.svg)}` : "";
+    return icon.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(icon.svg)}` : FALLBACK_ICON_DATA;
   }
-  return icon.svgUrl || "";
+  if (icon.svgUrl && /^https:\/\/api\.iconify\.design\/[^/]*:/.test(icon.svgUrl)) {
+    const [prefix, ...name] = String(icon.id || "mdi:pencil").split(":");
+    return `https://api.iconify.design/${prefix}/${name.join("-")}.svg`;
+  }
+  return icon.svgUrl || FALLBACK_ICON_DATA;
 }
 
 async function load() {
@@ -61,14 +80,16 @@ async function load() {
   render();
 }
 
-function renderNav() {
-  nav.replaceChildren();
+function renderNavInto(container, isDrawer) {
+  container.replaceChildren();
+  const choose = (id) => { activeGroup = id; render(); if (isDrawer) closeDrawer(); };
+
   const all = el("button", "group-btn");
   all.type = "button";
   all.append(el("span", null, "All projects"), el("span", "count", String(state.projects.length)));
   all.setAttribute("aria-current", activeGroup === "all" ? "true" : "false");
-  all.addEventListener("click", () => { activeGroup = "all"; render(); });
-  nav.append(all);
+  all.addEventListener("click", () => choose("all"));
+  container.append(all);
 
   for (const group of [...state.groups].sort((a, b) => a.order - b.order)) {
     const count = state.projects.filter((p) => p.groupId === group.id).length;
@@ -77,10 +98,11 @@ function renderNav() {
     button.type = "button";
     button.append(el("span", null, group.name), el("span", "count", String(count)));
     button.setAttribute("aria-current", activeGroup === group.id ? "true" : "false");
-    button.addEventListener("click", () => { activeGroup = group.id; render(); });
+    button.addEventListener("click", () => choose(group.id));
 
-    const remove = el("button", "group-del", "×");
+    const remove = el("button", "group-del");
     remove.type = "button";
+    remove.innerHTML = X_SVG;
     remove.title = `Remove ${group.name}`;
     remove.setAttribute("aria-label", `Remove group ${group.name}`);
     remove.addEventListener("click", () => {
@@ -96,8 +118,13 @@ function renderNav() {
       });
     });
     row.append(button, remove);
-    nav.append(row);
+    container.append(row);
   }
+}
+
+function renderNav() {
+  renderNavInto(nav, false);
+  renderNavInto(drawerNav, true);
 }
 
 function cardFor(project) {
@@ -107,8 +134,9 @@ function cardFor(project) {
   const icon = el("img", "icon");
   icon.src = iconSrc(project.icon);
   icon.alt = "";
-  icon.width = 34;
-  icon.height = 34;
+  icon.width = 16;
+  icon.height = 16;
+  icon.addEventListener("error", () => { icon.src = FALLBACK_ICON_DATA; });
   card.append(icon);
 
   const heading = el("h3");
@@ -119,7 +147,7 @@ function cardFor(project) {
   heading.append(link);
   if (project.kind === "repo" && project.public) heading.append(el("span", "badge-public", "public"));
   card.append(heading);
-  card.append(el("p", null, project.kind === "repo" ? project.assetPath : project.url));
+  card.append(el("p", "meta", project.kind === "repo" ? project.assetPath : project.url));
 
   const footer = el("footer");
   if (project.kind === "repo" && project.url) {
@@ -438,6 +466,7 @@ $("#save").addEventListener("click", async () => {
     state.groups = result.config.groups;
     state.projects = result.config.projects;
     dirty = false;
+    $("#save").classList.remove("dirty");
     render();
     announce("Saved.");
   } catch (error) {
@@ -446,6 +475,109 @@ $("#save").addEventListener("click", async () => {
     button.disabled = false;
   }
 });
+
+/* Mobile groups drawer */
+function openDrawer() {
+  drawer.showModal();
+  menuBtn.setAttribute("aria-expanded", "true");
+}
+function closeDrawer() {
+  if (drawer.open) drawer.close();
+  menuBtn.setAttribute("aria-expanded", "false");
+}
+menuBtn.addEventListener("click", openDrawer);
+$("#drawer-close").addEventListener("click", closeDrawer);
+drawer.addEventListener("close", () => menuBtn.setAttribute("aria-expanded", "false"));
+drawer.addEventListener("click", (event) => {
+  const sheet = drawer.querySelector(".drawer-sheet");
+  if (sheet && !sheet.contains(event.target)) closeDrawer();
+});
+
+/* Light-dismiss fallback for browsers without <dialog closedby> support */
+if (!("closedBy" in HTMLDialogElement.prototype)) {
+  for (const dialog of document.querySelectorAll("dialog[closedby='any']")) {
+    dialog.addEventListener("click", (event) => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      const inside = rect.top <= event.clientY && event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX && event.clientX <= rect.left + rect.width;
+      if (!inside) dialog.close();
+    });
+  }
+}
+
+/* Accent selector */
+function applyAccent(hex) {
+  const color = ACCENT_COLORS.find((entry) => entry.hex === hex) || ACCENT_COLORS[8];
+  const value = parseInt(color.hex.slice(1), 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  const pale = color.name === "Pure White" || color.name === "Slate";
+  const root = document.documentElement;
+  root.style.setProperty("--accent", color.hex);
+  root.style.setProperty("--accent-dim", `rgba(${r},${g},${b},${pale ? 0.08 : 0.10})`);
+  root.style.setProperty("--accent-glow", `rgba(${r},${g},${b},${pale ? 0.14 : 0.18})`);
+  root.style.setProperty("--accent-soft", `rgba(${r},${g},${b},0.06)`);
+  for (const swatch of document.querySelectorAll(".swatch")) {
+    const selected = swatch.dataset.hex === color.hex;
+    swatch.classList.toggle("selected", selected);
+    swatch.setAttribute("aria-checked", selected ? "true" : "false");
+    swatch.tabIndex = selected ? 0 : -1;
+  }
+}
+
+function initAccent() {
+  const popup = $("#accent-popup");
+  const button = $("#accentBtn");
+  const grid = el("div", "swatches");
+  popup.append(el("p", "accent-popup-title", "Accent colour"), grid);
+
+  for (const color of ACCENT_COLORS) {
+    const swatch = el("button", "swatch");
+    swatch.type = "button";
+    swatch.style.background = color.hex;
+    swatch.dataset.hex = color.hex;
+    swatch.title = color.name;
+    swatch.setAttribute("role", "radio");
+    swatch.setAttribute("aria-label", `Accent colour: ${color.name}`);
+    swatch.addEventListener("click", () => {
+      applyAccent(color.hex);
+      try { localStorage.setItem(ACCENT_STORAGE_KEY, color.hex); } catch {}
+      popup.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+    });
+    swatch.addEventListener("keydown", (event) => {
+      const items = [...grid.children];
+      const index = items.indexOf(swatch);
+      const steps = { ArrowRight: 1, ArrowDown: 6, ArrowLeft: -1, ArrowUp: -6 };
+      let next = null;
+      if (event.key in steps) next = (index + steps[event.key] + items.length) % items.length;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = items.length - 1;
+      if (next === null) return;
+      event.preventDefault();
+      items[next].focus();
+    });
+    grid.append(swatch);
+  }
+
+  let saved = "#06b6d4";
+  try { saved = localStorage.getItem(ACCENT_STORAGE_KEY) || saved; } catch {}
+  applyAccent(saved);
+
+  button.addEventListener("click", () => {
+    popup.hidden = !popup.hidden;
+    button.setAttribute("aria-expanded", popup.hidden ? "false" : "true");
+  });
+  document.addEventListener("click", (event) => {
+    if (!popup.hidden && !popup.contains(event.target) && !button.contains(event.target)) {
+      popup.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+initAccent();
 
 window.addEventListener("beforeunload", (event) => {
   if (!dirty) return;
