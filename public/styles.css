@@ -73,17 +73,12 @@ button {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 9px var(--s4); border-radius: var(--r); border: 1px solid var(--accent);
   background: var(--accent); color: #040507; font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: filter .15s, transform .1s;
+  cursor: pointer; transition: background-color .15s, border-color .15s;
 }
-button:hover { filter: brightness(1.1); }
-button:active { transform: translateY(1px); }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button.secondary { background: var(--surface2); border-color: var(--border2); color: var(--text); font-weight: 500; }
-button.secondary:hover { background: var(--surface3); filter: none; }
 button.ghost { background: transparent; border-color: var(--border2); color: var(--dim); font-weight: 500; }
-button.ghost:hover { color: var(--text); border-color: var(--accent); filter: none; }
 button.danger { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger); font-size: 11px; font-weight: 500; padding: 6px 10px; }
-button.danger:hover { background: rgba(255,95,102,.18); border-color: var(--danger); }
 button.btn-save { padding: 8px 18px; position: relative; }
 button.btn-save.dirty::after {
   content: ''; position: absolute; inline-size: 8px; block-size: 8px; border-radius: 50%;
@@ -93,7 +88,6 @@ button.btn-save.dirty::after {
 button.btn-icon, #menuBtn {
   padding: 7px 9px; background: transparent; border-color: var(--border2); color: var(--dim); font-size: 16px;
 }
-button.btn-icon:hover, #menuBtn:hover { color: var(--text); border-color: var(--accent); }
 #menuBtn { display: none; }
 
 /* Accent picker */
@@ -111,7 +105,6 @@ button.btn-icon:hover, #menuBtn:hover { color: var(--text); border-color: var(--
   inline-size: 26px; block-size: 26px; border-radius: 50%; border: 2px solid transparent;
   cursor: pointer; padding: 0; transition: transform .12s;
 }
-.swatch:hover { transform: scale(1.15); }
 .swatch.selected { border-color: #fff; box-shadow: 0 0 0 1px rgba(255,255,255,.3); transform: scale(1.1); }
 
 /* Layout */
@@ -127,7 +120,6 @@ button.btn-icon:hover, #menuBtn:hover { color: var(--text); border-color: var(--
 .group-btn[aria-current="true"] { background: var(--accent-dim); border-color: var(--border); color: var(--accent); }
 .group-btn .count { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .group-del { padding: 6px 8px; min-inline-size: 28px; font-size: 14px; background: transparent; border-color: transparent; color: var(--muted); }
-.group-del:hover { color: var(--danger); border-color: var(--danger-border); }
 
 .content { min-inline-size: 0; }
 .content-head { display: flex; align-items: center; gap: var(--s3); margin-block-end: var(--s4); }
@@ -140,20 +132,19 @@ button.btn-icon:hover, #menuBtn:hover { color: var(--text); border-color: var(--
   display: flex; flex-direction: column; gap: var(--s2); position: relative;
   padding: 12px; margin-block-end: 10px; border-radius: var(--r2);
   background: linear-gradient(180deg, var(--surface-card), var(--surface)); border: 1px solid var(--border);
-  transition: border-color .15s, transform .15s;
+  transition: border-color .15s;
 }
-.card:hover, .card:has(a.card-link:focus-visible) { border-color: var(--border-card-hover); transform: translateY(-1px); }
+.card:hover, .card:has(a.card-link:focus-visible) { border-color: var(--border-card-hover); }
 .card-top { display: flex; align-items: center; gap: var(--s2); }
 .card img.icon { display: block; inline-size: 16px; block-size: 16px; object-fit: contain; flex-shrink: 0; }
 .card h3 { margin: 0; font-size: 12.5px; font-weight: 500; line-height: 1.35; min-inline-size: 0; }
 .card h3 a { color: var(--text); text-decoration: none; }
 .card p.meta { margin: 0; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; line-height: 1.45; }
 .badge-public { font-size: 10px; font-weight: 600; color: var(--ok); border: 1px solid currentColor; border-radius: 999px; padding: 0 6px; }
-.card footer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-block-start: auto; }
+.card footer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-block-start: auto; position: relative; z-index: 3; }
 .card footer a, .card footer button { position: relative; z-index: 1; padding: 5px 9px; font-size: 11px; font-weight: 500; min-block-size: 0; }
 .card footer a.ghost { color: var(--dim); text-decoration: none; }
-.card footer a.ghost:hover { color: var(--text); }
-.card a.card-link::after { content: ''; position: absolute; inset: 0; }
+.card a.card-link::after { content: ''; position: absolute; inset: 0; z-index: 0; }
 .card:has(a.card-link) a:not(.card-link), .card:has(a.card-link) button { position: relative; z-index: 1; }
 
 /* Toast */
@@ -174,7 +165,7 @@ button.btn-icon:hover, #menuBtn:hover { color: var(--text); border-color: var(--
 }
 .confirm-modal[open] { display: block; }
 .project-dialog { inline-size: min(520px, calc(100vw - 40px)); }
-.confirm-modal::backdrop { background: rgba(3,3,6,.72); backdrop-filter: blur(3px); }
+.confirm-modal::backdrop { background: rgba(3,3,6,.72); }
 .confirm-modal h2 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
 .confirm-body { font-size: 12.5px; color: var(--dim); line-height: 1.5; margin: 0 0 18px; }
 .confirm-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s2); margin-block-start: 16px; }
@@ -221,6 +212,15 @@ fieldset legend { padding-inline: 6px; }
 
 @media (hover: hover) {
   html { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  button.primary:hover { background: #08c9e4; border-color: #08c9e4; }
+  button.secondary:hover { background: var(--surface3); }
+  button.ghost:hover { color: var(--text); border-color: var(--accent); }
+  button.danger:hover { background: rgba(255,95,102,.18); border-color: var(--danger); }
+  button.btn-icon:hover, #menuBtn:hover { color: var(--text); border-color: var(--accent); }
+  .swatch:hover { transform: scale(1.15); }
+  .group-del:hover { color: var(--danger); border-color: var(--danger-border); }
+  .card footer a.ghost:hover { color: var(--text); }
+  input:hover, select:hover, textarea:hover { border-color: var(--border-hover); }
 }
 
 @media (max-width: 900px) {

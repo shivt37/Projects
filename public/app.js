@@ -122,9 +122,18 @@ function renderNavInto(container, isDrawer) {
   }
 }
 
+function syncNavInert() {
+  const open = drawer.open;
+  nav.inert = open;
+  drawerNav.inert = !open;
+  nav.setAttribute("aria-hidden", String(open));
+  drawerNav.setAttribute("aria-hidden", String(!open));
+}
+
 function renderNav() {
   renderNavInto(nav, false);
   renderNavInto(drawerNav, true);
+  syncNavInert();
 }
 
 function cardFor(project) {
@@ -164,8 +173,11 @@ function cardFor(project) {
   remove.type = "button";
   remove.addEventListener("click", () => askConfirm(`Delete “${project.name}”?`, () => {
     state.projects = state.projects.filter((p) => p.id !== project.id);
+    card.remove();
+    if (!cards.querySelector(".card")) cards.append(el("p", "hint", "No projects here yet. Use “Add project” to create one."));
+    $("#count").textContent = String(cards.querySelectorAll(".card").length);
+    renderNav();
     markDirty();
-    render();
   }));
   footer.append(edit, remove);
   card.append(footer);
@@ -480,14 +492,19 @@ $("#save").addEventListener("click", async () => {
 function openDrawer() {
   drawer.showModal();
   menuBtn.setAttribute("aria-expanded", "true");
+  syncNavInert();
 }
 function closeDrawer() {
   if (drawer.open) drawer.close();
   menuBtn.setAttribute("aria-expanded", "false");
+  syncNavInert();
 }
 menuBtn.addEventListener("click", openDrawer);
 $("#drawer-close").addEventListener("click", closeDrawer);
-drawer.addEventListener("close", () => menuBtn.setAttribute("aria-expanded", "false"));
+drawer.addEventListener("close", () => {
+  menuBtn.setAttribute("aria-expanded", "false");
+  syncNavInert();
+});
 drawer.addEventListener("click", (event) => {
   const sheet = drawer.querySelector(".drawer-sheet");
   if (sheet && !sheet.contains(event.target)) closeDrawer();
