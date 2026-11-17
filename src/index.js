@@ -1,3 +1,4 @@
+import { handleApi } from "./api.js";
 import {
   checkSession,
   handleLogin,
@@ -62,6 +63,10 @@ export default {
         }
         return loginResponse(env);
       }
+    }
+
+    if (url.pathname.startsWith("/api/")) {
+      return handleApi(request, env, url);
     }
 
     if (url.pathname === "/") {

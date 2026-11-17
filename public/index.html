@@ -11,15 +11,127 @@
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<header style="display:flex;align-items:center;gap:var(--s3);padding:var(--s5);border-block-end:1px solid var(--border2)">
-  <strong style="font-size:1.1rem">Projects Gateway</strong>
-  <form method="post" action="/logout" style="margin-inline-start:auto">
-    <button type="submit" style="background:transparent;color:var(--dim);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px">Sign out</button>
-  </form>
+<header class="app-header">
+  <div class="brand"><div class="mark" aria-hidden="true">P</div><div><h1 id="app-title">Projects Gateway</h1><p class="sub">Your projects, one place</p></div></div>
+  <div class="header-actions">
+    <button type="button" id="add-group" class="ghost">Add group</button>
+    <button type="button" id="add-project" class="primary">Add project</button>
+    <button type="button" id="save" class="primary">Save changes</button>
+    <form method="post" action="/logout"><button type="submit" class="ghost">Sign out</button></form>
+  </div>
 </header>
-<main style="padding:var(--s6);max-inline-size:72rem;margin-inline:auto">
-  <h1 style="font-size:1.4rem;margin-block-end:var(--s2)">Gateway scaffold ready</h1>
-  <p style="color:var(--dim)">The project browser will be added in the next phase.</p>
-</main>
+
+<div class="shell">
+  <aside class="sidebar" aria-label="Project groups">
+    <nav id="group-nav"></nav>
+  </aside>
+  <main class="content">
+    <div class="content-head"><h2 id="section-title">All projects</h2><span id="count" class="pill">0</span></div>
+    <section id="cards" class="card-grid" aria-label="Projects"></section>
+  </main>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+
+<dialog id="group-dialog" aria-labelledby="group-title">
+  <h2 id="group-title">Add group</h2>
+  <form id="group-form" method="dialog">
+    <div class="field">
+      <label for="group-name">Group name <span aria-hidden="true">*</span></label>
+      <input type="text" id="group-name" name="group-name" maxlength="80" required aria-invalid="false" aria-describedby="group-hint" data-error="group-error">
+      <span id="group-hint" class="hint">A short label for the sidebar.</span>
+      <div id="group-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Enter a group name.</div>
+    </div>
+    <div class="dialog-actions"><button type="button" data-close class="ghost">Cancel</button><button type="submit" class="primary">Add group</button></div>
+  </form>
+</dialog>
+
+<dialog id="project-dialog" aria-labelledby="project-title">
+  <h2 id="project-title">Add project</h2>
+  <form id="project-form" method="dialog">
+    <div class="field">
+      <label for="p-name">Name <span aria-hidden="true">*</span></label>
+      <input type="text" id="p-name" name="name" maxlength="120" required aria-invalid="false" aria-describedby="p-name-hint" data-error="p-name-error">
+      <span id="p-name-hint" class="hint">Display name on the card.</span>
+      <div id="p-name-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Enter a name.</div>
+    </div>
+    <div class="field">
+      <label for="p-slug">URL slug <span aria-hidden="true">*</span></label>
+      <input type="text" id="p-slug" name="slug" maxlength="64" pattern="[a-z0-9][a-z0-9-_]{0,63}" required aria-invalid="false" aria-describedby="p-slug-hint" data-error="p-slug-error" spellcheck="false" autocapitalize="off" autocorrect="off">
+      <span id="p-slug-hint" class="hint">Lowercase letters, digits, hyphen or underscore. Open at /p/&lt;slug&gt;.</span>
+      <div id="p-slug-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Use lowercase letters, digits, - or _.</div>
+    </div>
+    <div class="field">
+      <label for="p-group">Group</label>
+      <select id="p-group" name="group"></select>
+    </div>
+    <fieldset>
+      <legend>Project type</legend>
+      <div class="choice-row">
+        <label class="choice"><input type="radio" name="kind" value="repo" checked> Hosted in this repo</label>
+        <label class="choice"><input type="radio" name="kind" value="external"> External link</label>
+      </div>
+    </fieldset>
+    <div class="field" data-when="repo">
+      <label for="p-path">GitHub path <span aria-hidden="true">*</span></label>
+      <input type="text" id="p-path" name="assetPath" maxlength="500" required aria-invalid="false" aria-describedby="p-path-hint" data-error="p-path-error" spellcheck="false" autocapitalize="off" autocorrect="off">
+      <span id="p-path-hint" class="hint">Relative to public/, e.g. projects/site/ or projects/page.html.</span>
+      <div id="p-path-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Enter a repo path.</div>
+    </div>
+    <div class="field" data-when="repo">
+      <label for="p-entry">Entry file <span class="optional">(optional)</span></label>
+      <input type="text" id="p-entry" name="entry" maxlength="200" placeholder="index.html" spellcheck="false" autocapitalize="off" autocorrect="off">
+      <span class="hint">Default is index.html when the path is a folder.</span>
+    </div>
+    <div class="field" data-when="external">
+      <label for="p-url">External URL <span aria-hidden="true">*</span></label>
+      <input type="url" id="p-url" name="url" maxlength="2000" aria-invalid="false" aria-describedby="p-url-hint" data-error="p-url-error" spellcheck="false" autocapitalize="off" autocorrect="off">
+      <span id="p-url-hint" class="hint">https://example.com</span>
+      <div id="p-url-error" class="error-msg" hidden><span role="img" aria-label="Error">&#10006;</span> Enter a valid URL.</div>
+    </div>
+    <div class="field" data-when="repo">
+      <label for="p-extra-url">Extra link <span class="optional">(optional)</span></label>
+      <input type="url" id="p-extra-url" name="extraUrl" maxlength="2000" placeholder="https://google.com">
+      <span class="hint">Shown beside this project's card, e.g. a source repo or another site.</span>
+    </div>
+    <div class="field">
+      <label for="p-link-label">Link label <span class="optional">(optional)</span></label>
+      <input type="text" id="p-link-label" name="linkLabel" maxlength="80" placeholder="Open link">
+    </div>
+    <label class="check"><input type="checkbox" id="p-public" name="public"> Public — open /p/&lt;slug&gt; without the gateway PIN</label>
+    <fieldset>
+      <legend>Icon</legend>
+      <div class="choice-row">
+        <label class="choice"><input type="radio" name="iconMode" value="upload"> Upload SVG</label>
+        <label class="choice"><input type="radio" name="iconMode" value="url"> SVG link</label>
+        <label class="choice"><input type="radio" name="iconMode" value="inline"> Paste SVG</label>
+        <label class="choice"><input type="radio" name="iconMode" value="random" checked> Random (Iconify)</label>
+      </div>
+    </fieldset>
+    <div class="field" data-icon="upload" hidden>
+      <label for="p-icon-file">SVG file</label>
+      <input type="file" id="p-icon-file" name="iconFile" accept=".svg,image/svg+xml">
+    </div>
+    <div class="field" data-icon="url" hidden>
+      <label for="p-icon-url">SVG URL</label>
+      <input type="url" id="p-icon-url" name="iconUrl" maxlength="2000" placeholder="https://example.com/icon.svg">
+    </div>
+    <div class="field" data-icon="inline" hidden>
+      <label for="p-icon-code">SVG code</label>
+      <textarea id="p-icon-code" name="iconCode" rows="4" spellcheck="false"></textarea>
+      <button type="button" id="random-icon" class="ghost">Generate random icon</button>
+    </div>
+    <div class="icon-preview"><img id="icon-preview" alt="" width="40" height="40" hidden></div>
+    <div class="dialog-actions"><button type="button" data-close class="ghost">Cancel</button><button type="button" id="delete-project" class="danger" hidden>Delete</button><button type="submit" class="primary">Save project</button></div>
+  </form>
+</dialog>
+
+<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+  <h2 id="confirm-title">Are you sure?</h2>
+  <p id="confirm-message"></p>
+  <div class="dialog-actions"><button type="button" id="confirm-cancel" class="ghost" autofocus>Cancel</button><button type="button" id="confirm-delete" class="danger">Delete</button></div>
+</dialog>
+
+<script src="/app.js" defer></script>
 </body>
 </html>
