@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>SVG Editor — Boxy SVG</title>
+<style>
+  :root {
+    --bg: #eef1f6;
+    --panel: #ffffff;
+    --ink: #172033;
+    --muted: #667085;
+    --line: #e2e7ef;
+    --accent: #4f46e5;
+    --accent-deep: #4338ca;
+    --soft: #eef0ff;
+    --ok: #047857;
+    --ok-soft: #ecfdf5;
+    --warn: #b45309;
+    --warn-soft: #fffbeb;
+    --danger: #b91c1c;
+    --danger-soft: #fef2f2;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  button, input { font: inherit; }
+  button { color: inherit; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .bar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    z-index: 5;
+  }
+
+  .brand { display: flex; align-items: center; gap: 9px; min-width: 0; margin-right: auto; }
+  .brand-mark {
+    width: 32px; height: 32px; flex: none;
+    border-radius: 9px;
+    background: linear-gradient(145deg, var(--accent), #7c3aed);
+    color: #fff;
+    display: grid; place-items: center;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, .28);
+  }
+  .brand-mark svg { width: 18px; height: 18px; }
+  .brand-title { font-size: 15px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
+  .brand-sub { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+
+  .status {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 550;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--soft);
+    color: var(--accent-deep);
+    white-space: nowrap;
+  }
+  .status::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .status[data-state="ready"] { background: var(--ok-soft); color: var(--ok); }
+  .status[data-state="dirty"] { background: var(--warn-soft); color: var(--warn); }
+  .status[data-state="error"] { background: var(--danger-soft); color: var(--danger); }
+
+  .actions { flex: none; display: flex; align-items: center; gap: 6px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font-size: 13px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, transform .06s;
+  }
+  .btn svg { width: 16px; height: 16px; flex: none; }
+  .btn:hover { background: #f8f9fc; border-color: #d4dae5; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, .28);
+  }
+  .btn.primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+  .btn[disabled] { opacity: .45; cursor: default; pointer-events: none; }
+
+  .stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    background: var(--bg);
+  }
+
+  boxy-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0 !important;
+    outline: none;
+  }
+
+  .hint {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #545c6b;
+    background: #f7f8fc;
+    border-bottom: 1px solid var(--line);
+  }
+  .hint strong { color: var(--ink); font-weight: 600; }
+  .hint-close {
+    margin-left: auto;
+    flex: none;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: grid; place-items: center;
+  }
+  .hint-close:hover { background: #eceef4; }
+  .hint-close svg { width: 14px; height: 14px; }
+  .hint[hidden] { display: none; }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(238, 241, 246, .92);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 3;
+    text-align: center;
+  }
+  .overlay[hidden] { display: none; }
+  .overlay-card {
+    max-width: 380px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 20px;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, .1);
+  }
+  .spinner {
+    width: 30px; height: 30px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    border: 3px solid #e2e7ef;
+    border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .overlay h2 { margin: 0 0 6px; font-size: 16px; }
+  .overlay p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted); }
+  .overlay p + p { margin-top: 10px; }
+  .overlay a { color: var(--accent-deep); font-weight: 600; text-decoration: none; }
+  .overlay a:hover { text-decoration: underline; }
+  .overlay .error-mark {
+    width: 34px; height: 34px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--danger-soft);
+    color: var(--danger);
+    font-weight: 700;
+    font-size: 18px;
+  }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (max-width: 720px) {
+    .brand-sub { display: none; }
+    .status { display: none; }
+    .btn .btn-label { display: none; }
+    .btn { width: 36px; padding: 0; }
+    .btn.primary { width: auto; padding: 0 12px; }
+    .btn.primary .btn-label { display: inline; }
+    .hint { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+      </span>
+      <div>
+        <div class="brand-title">SVG Editor</div>
+        <div class="brand-sub">Powered by Boxy SVG</div>
+      </div>
+    </div>
+
+    <span class="status" id="status" role="status" aria-live="polite" data-state="loading">Loading editor…</span>
+
+    <div class="actions">
+      <button class="btn" id="openBtn" type="button" disabled title="Open an SVG or image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5-5 5 5"/><path d="M12 5v12"/></svg>
+        <span class="btn-label">Open</span>
+      </button>
+      <button class="btn" id="copyBtn" type="button" disabled title="Copy SVG code">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span class="btn-label">Copy</span>
+      </button>
+      <button class="btn" id="resetBtn" type="button" disabled title="Reopen the sample icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        <span class="btn-label">Sample</span>
+      </button>
+      <button class="btn primary" id="saveBtn" type="button" disabled title="Download edited SVG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+        <span class="btn-label">Download</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="hint" id="hint">
+    <span><strong>Tip:</strong> to remove the outer border, pick the Edit tool (Shift+E), select the frame&rsquo;s nodes, then press Delete. Or use Path &rarr; Split Paths, delete the rectangle layer, and undo if interior holes fill.</span>
+    <button class="hint-close" id="hintClose" type="button" aria-label="Dismiss tip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+
+  <main class="stage" id="stage">
+    <boxy-svg id="editor" name="SVG Editor" accent="#4f46e5"></boxy-svg>
+
+    <div class="overlay" id="overlay">
+      <div class="overlay-card" id="overlayCard">
+        <div class="spinner" id="spinner"></div>
+        <h2 id="overlayTitle">Loading the editor…</h2>
+        <p id="overlayText">Fetching Boxy SVG from boxy-svg.com. This needs an internet connection every time you open the page.</p>
+      </div>
+    </div>
+  </main>
+
+  <input class="sr-only" id="fileInput" type="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp,image/gif,image/avif">
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const BOXY_BASE = "https://boxy-svg.com/node_modules/@boxy-svg/boxy-svg/";
+  const COMPONENT_URL = BOXY_BASE + "boxy-svg.js";
+  // Documented component inputs. Set explicitly as absolute URLs so the editor never tries
+  // to resolve them against this page (which breaks when the page is opened from file://).
+  const ASSETS = {
+    logo: BOXY_BASE + "logo.svg",
+    menu: BOXY_BASE + "menus/default.html",
+    locale: BOXY_BASE + "locales/en.ftl",
+    theme: BOXY_BASE + "themes/fluent.css",
+    icons: BOXY_BASE + "icons/default.svg"
+  };
+  const STORAGE_KEY = "bx-editor:doc";
+  const HINT_KEY = "bx-editor:hint-hidden";
+
+  const SAMPLE = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+  <path d="M0 0h24v24H0z" fill="none"/>
+  <path fill="currentColor" d="M3.616 19q-.691 0-1.153-.462T2 17.384V6.616q0-.691.463-1.153T3.616 5h16.769q.69 0 1.153.463T22 6.616v10.769q0 .69-.462 1.153T20.385 19zm0-1h16.769q.269 0 .442-.173t.173-.442V6.615q0-.269-.173-.442T20.385 6H3.615q-.269 0-.442.173T3 6.616v10.769q0 .269.173.442t.443.173M3 18V6zm2.27-3.308h.884V13h2.269v1.692h.885v-4.307q0-.444-.317-.761q-.316-.316-.76-.316H6.346q-.444 0-.76.316q-.317.317-.317.76zm.884-2.577V10.5q0-.115.096-.212t.212-.096h1.654q.115 0 .211.096t.096.212v1.616zm6 2.577h1.192l1.558-5.384h-.923L12.75 13.56l-1.23-4.252h-.924zm5.692 0h.885V9.308H16.5v.884h1.346z"/>
+</svg>`;
+
+  const $ = (id) => document.getElementById(id);
+
+  // The Boxy component reads *every* localStorage entry of this origin and runs JSON.parse
+  // on it, so a raw SVG string in localStorage breaks its start-up. Documents therefore
+  // live in IndexedDB, which the component never touches.
+  const DB_NAME = "bx-editor";
+  const DB_STORE = "kv";
+  const idbOpen = () => new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const idbGet = async (key) => {
+    try {
+      const db = await idbOpen();
+      return await new Promise((resolve, reject) => {
+        const r = db.transaction(DB_STORE).objectStore(DB_STORE).get(key);
+        r.onsuccess = () => resolve(r.result ?? null);
+        r.onerror = () => reject(r.error);
+      });
+    } catch { return null; }
+  };
+  const idbSet = async (key, value) => {
+    try {
+      const db = await idbOpen();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, "readwrite");
+        tx.objectStore(DB_STORE).put(value, key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch { return false; }
+  };
+  const readStore = (key) => {
+    try { return localStorage.getItem(key); } catch { return null; }
+  };
+  const removeStore = (key) => {
+    try { localStorage.removeItem(key); return true; } catch { return false; }
+  };
+  const writeStore = (key, value) => {
+    try { localStorage.setItem(key, value); return true; } catch { return false; }
+  };
+  const editor = $("editor");
+  const status = $("status");
+  const overlay = $("overlay");
+  const overlayCard = $("overlayCard");
+  const spinner = $("spinner");
+  const overlayTitle = $("overlayTitle");
+  const overlayText = $("overlayText");
+  const fileInput = $("fileInput");
+  const hint = $("hint");
+
+  let ready = false;
+
+  const setStatus = (text, state) => {
+    status.textContent = text;
+    status.dataset.state = state;
+  };
+
+  const showError = (message, detail) => {
+    spinner.hidden = true;
+    overlayCard.querySelector(".error-mark")?.remove();
+    overlayTitle.textContent = "Couldn’t load Boxy SVG";
+    overlayText.innerHTML = "";
+    const mark = document.createElement("div");
+    mark.className = "error-mark";
+    mark.textContent = "!";
+    overlayCard.insertBefore(mark, overlayTitle);
+    const p = document.createElement("p");
+    p.textContent = message;
+    overlayText.append(p);
+    if (detail) {
+      const d = document.createElement("p");
+      d.style.fontFamily = "ui-monospace, Menlo, Consolas, monospace";
+      d.style.fontSize = "12px";
+      d.style.wordBreak = "break-word";
+      d.textContent = detail;
+      overlayText.append(d);
+    }
+    const p2 = document.createElement("p");
+    const retry = document.createElement("a");
+    retry.href = "#";
+    retry.textContent = "Try again";
+    retry.addEventListener("click", (e) => { e.preventDefault(); boot(true); });
+    p2.append(retry, document.createTextNode(" · or use the "));
+    const alt = document.createElement("a");
+    alt.href = "svg-editor.html";
+    alt.textContent = "simple editor";
+    p2.append(alt, document.createTextNode("."));
+    overlayText.append(p2);
+    overlay.hidden = false;
+    setStatus("Offline", "error");
+    ready = false;
+    for (const b of document.querySelectorAll(".actions .btn")) b.disabled = true;
+  };
+
+  const withTimeout = (promise, ms, label) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(label + " timed out after " + ms / 1000 + "s")), ms))
+    ]);
+
+  const runtimeErrors = [];
+  window.addEventListener("error", (e) => {
+    runtimeErrors.push(e.message || String(e.error || e));
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const r = e.reason;
+    runtimeErrors.push(r && r.message ? r.message : String(r));
+  });
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Debug aid: when anything on this page calls JSON.parse on non-JSON text, record the
+  // beginning of that text and who called it, then let the original error through.
+  const nativeParse = JSON.parse;
+  JSON.parse = function (text, ...rest) {
+    try {
+      return nativeParse.call(this, text, ...rest);
+    } catch (err) {
+      const caller = (new Error().stack || "").split("\n").slice(2, 6).map((l) => l.trim()).join(" <- ");
+      const info = "JSON.parse failed on \"" + String(text).slice(0, 60).replace(/\s+/g, " ") + "\" from " + caller;
+      runtimeErrors.push(info);
+      console.warn("[boxy-debug]", info);
+      throw err;
+    }
+  };
+
+
+  // Checks the script and every asset the component needs, and says exactly which one fails.
+  // Lists localStorage entries that are not valid JSON (they would trip the component too).
+  // Only reports, never deletes: on file:// all local pages share this storage.
+  const nonJSONKeys = () => {
+    const out = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        try { nativeParse.call(JSON, value); }
+        catch { out.push(key + " = " + String(value).slice(0, 24).replace(/\s+/g, " ") + "…"); }
+      }
+    } catch { /* storage unavailable */ }
+    return out;
+  };
+
+  const probeAll = async () => {
+    const targets = { script: COMPONENT_URL, ...ASSETS };
+    const lines = await Promise.all(Object.entries(targets).map(async ([name, url]) => {
+      try {
+        const res = await withTimeout(fetch(url, { cache: "no-store", mode: "cors" }), 10000, "request");
+        return name + ": " + (res.ok ? "OK" : "HTTP " + res.status);
+      } catch (err) {
+        return name + ": blocked/failed";
+      }
+    }));
+    let out = lines.join(" · ");
+    if (location.protocol === "file:") {
+      out += " · page is opened from file:// — try serving it over http://localhost";
+    }
+    const bad = nonJSONKeys();
+    if (bad.length) {
+      out += " · non-JSON localStorage keys: " + bad.join("; ");
+    }
+    if (runtimeErrors.length) {
+      out += " · page errors: " + runtimeErrors.slice(-2).join(" | ");
+    }
+    return out;
+  };
+
+  let statusTimer = 0;
+  const flash = (text) => {
+    clearTimeout(statusTimer);
+    setStatus(text, "ready");
+    statusTimer = window.setTimeout(() => setStatus("Ready", "ready"), 2200);
+  };
+
+  const toBlobURL = (text) => URL.createObjectURL(new Blob([text], { type: "image/svg+xml" }));
+
+  const downloadSVG = async () => {
+    if (!ready) return;
+    try {
+      const svg = await editor.getSVG({ removeBoxySVGMetadata: true });
+      const url = toBlobURL(svg);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "icon-edited.svg";
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      flash("SVG downloaded");
+    } catch (error) {
+      console.error(error);
+      flash("Download failed");
+    }
+  };
+
+  const legacyCopy = (text) => {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.append(area);
+    area.focus();
+    area.select();
+    const copied = document.execCommand("copy");
+    area.remove();
+    if (!copied) throw new Error("copy command failed");
+  };
+
+  const copySVG = async () => {
+    if (!ready) return;
+    try {
+      const svg = await editor.getSVG({ removeBoxySVGMetadata: true });
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(svg);
+        } catch {
+          legacyCopy(svg);
+        }
+      } else {
+        legacyCopy(svg);
+      }
+      flash("SVG code copied");
+    } catch (error) {
+      console.error(error);
+      flash("Copy failed");
+    }
+  };
+
+  const loadSVG = async (svg) => {
+    if (!ready) return;
+    try {
+      await editor.setSVG(svg);
+      setStatus("Ready", "ready");
+    } catch (error) {
+      console.error(error);
+      setStatus("Load failed", "error");
+    }
+  };
+
+  const openFile = async (file) => {
+    if (!file || !ready) return;
+    setStatus("Opening…", "loading");
+    try {
+      if (file.type.includes("svg") || /\.svg$/i.test(file.name)) {
+        await loadSVG(await file.text());
+      } else {
+        const dataURL = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        const size = await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve({ w: img.naturalWidth || 512, h: img.naturalHeight || 512 });
+          img.onerror = () => resolve({ w: 512, h: 512 });
+          img.src = dataURL;
+        });
+        await loadSVG(
+          `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+          `width="${size.w}" height="${size.h}" viewBox="0 0 ${size.w} ${size.h}">` +
+          `<image width="${size.w}" height="${size.h}" xlink:href="${dataURL}" href="${dataURL}"/></svg>`
+        );
+      }
+      flash(`Opened ${file.name}`);
+    } catch (error) {
+      console.error(error);
+      setStatus("Open failed", "error");
+    }
+  };
+
+  const autosave = async () => {
+    if (!ready) return;
+    try {
+      const svg = await editor.getSVG();
+      const ok = await idbSet(STORAGE_KEY, svg);
+      setStatus(ok ? "Saved on device" : "Autosave unavailable", ok ? "ready" : "error");
+    } catch (error) {
+      console.warn("Autosave failed", error);
+    }
+  };
+
+  let listenersAdded = false;
+  let saveTimer = 0;
+
+  const looksLikeSVG = (text) => typeof text === "string" && text.includes("<svg");
+
+  // Does not rely on `whenReady`: the editor counts as started once it accepts a document
+  // and gives it back again.
+  const waitUntilUsable = async (initialSVG) => {
+    if (editor.whenReady && typeof editor.whenReady.then === "function") {
+      await Promise.race([editor.whenReady.catch(() => {}), sleep(8000)]);
+    }
+    const deadline = Date.now() + 40000;
+    let lastError = new Error("Editor never accepted a document");
+    while (Date.now() < deadline) {
+      try {
+        if (typeof editor.setSVG !== "function") throw new Error("setSVG is not available on <boxy-svg>");
+        await withTimeout(editor.setSVG(initialSVG), 8000, "setSVG");
+        const back = await withTimeout(editor.getSVG(), 8000, "getSVG");
+        if (!looksLikeSVG(back)) throw new Error("getSVG returned no SVG");
+        return;
+      } catch (err) {
+        lastError = err;
+        await sleep(1000);
+      }
+    }
+    throw lastError;
+  };
+
+  const boot = async (isRetry = false) => {
+    if (isRetry) {
+      overlayCard.querySelector(".error-mark")?.remove();
+      spinner.hidden = false;
+      overlayTitle.textContent = "Loading the editor…";
+      overlayText.textContent = "Fetching Boxy SVG from boxy-svg.com…";
+      overlay.hidden = false;
+      setStatus("Loading editor…", "loading");
+    }
+    let stage = "downloading the component script";
+    try {
+      // Move an old localStorage autosave (the cause of the start-up failure) into IndexedDB
+      // before the component gets a chance to read it.
+      let saved = await idbGet(STORAGE_KEY);
+      const legacy = readStore(STORAGE_KEY);
+      if (legacy !== null) {
+        if (!saved && looksLikeSVG(legacy)) {
+          saved = legacy;
+          await idbSet(STORAGE_KEY, legacy);
+        }
+        removeStore(STORAGE_KEY);
+      }
+
+      for (const [name, value] of Object.entries(ASSETS)) editor.setAttribute(name, value);
+
+      if (!customElements.get("boxy-svg")) {
+        const url = isRetry ? COMPONENT_URL + "?retry=" + Date.now() : COMPONENT_URL;
+        await withTimeout(import(url), 20000, "Downloading the component");
+      }
+      stage = "registering the <boxy-svg> element";
+      await withTimeout(customElements.whenDefined("boxy-svg"), 10000, "Element registration");
+
+      stage = "starting the editor";
+      try {
+        await waitUntilUsable(looksLikeSVG(saved) ? saved : SAMPLE);
+      } catch (err) {
+        if (!saved) throw err;
+        // A broken autosave must never lock the editor out: fall back to the sample.
+        console.warn("Saved document could not be opened, using sample", err);
+        await waitUntilUsable(SAMPLE);
+      }
+
+      ready = true;
+      setStatus("Ready", "ready");
+      overlay.hidden = true;
+
+      if (!listenersAdded) {
+        listenersAdded = true;
+        const onChange = () => {
+          setStatus("Unsaved changes", "dirty");
+          clearTimeout(saveTimer);
+          saveTimer = window.setTimeout(autosave, 700);
+        };
+        editor.addEventListener("change", onChange);
+        editor.addEventListener("changeend", onChange);
+        editor.addEventListener("zoomchange", (event) => {
+          if (typeof event.detail === "number") flash(`${Math.round(event.detail)}%`);
+        });
+      }
+
+      for (const button of document.querySelectorAll(".actions .btn")) button.disabled = false;
+    } catch (error) {
+      console.error("[boxy] failed while " + stage, error);
+      const report = await probeAll();
+      showError(
+        "The editor failed while " + stage + ".",
+        (error && error.message ? error.message : String(error)) + " — " + report
+      );
+    }
+  };
+
+  $("saveBtn").addEventListener("click", downloadSVG);
+  $("copyBtn").addEventListener("click", copySVG);
+  $("resetBtn").addEventListener("click", () => loadSVG(SAMPLE));
+  $("openBtn").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = "";
+    if (file) openFile(file);
+  });
+
+  if (readStore(HINT_KEY) === "1") {
+    hint.hidden = true;
+  }
+  $("hintClose").addEventListener("click", () => {
+    hint.hidden = true;
+    writeStore(HINT_KEY, "1");
+  });
+
+  window.addEventListener("beforeunload", (event) => {
+    if (status.dataset.state === "dirty") {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
+
+  setStatus("Loading editor…", "loading");
+  boot(false);
+})();
+</script>
+</body>
+</html>

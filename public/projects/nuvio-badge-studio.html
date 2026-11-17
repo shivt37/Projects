@@ -1,0 +1,1585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nuvio Badge Studio</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#09090B;
+  --surface:#101013;
+  --surface-2:#17171B;
+  --surface-3:#1F1F24;
+  --border:rgba(255,255,255,.07);
+  --border-strong:rgba(255,255,255,.13);
+  --text:#EDEDF0;
+  --muted:#86868F;
+  --faint:#56565F;
+  --accent:#7E8AFF;
+  --accent-soft:rgba(126,138,255,.14);
+  --ok:#4ADE80;
+  --warn:#FBBF24;
+  --btn-pri-bg:#F1F1F3;
+  --btn-pri-bg-h:#FFFFFF;
+  --btn-pri-fg:#09090B;
+  --preview-bg:#0C0C0F;
+  --mesh:
+    radial-gradient(ellipse 100% 80% at 15% 20%,#3A2A5A 0,transparent 55%),
+    radial-gradient(ellipse 80% 100% at 85% 15%,#1A3A5A 0,transparent 55%),
+    radial-gradient(ellipse 100% 80% at 70% 85%,#1A4A42 0,transparent 55%),
+    radial-gradient(ellipse 80% 100% at 10% 90%,#4A3A2A 0,transparent 55%),
+    #0F0D14;
+  --pvbg:var(--mesh);
+  --ch:20px;--ih:16px;--iminw:34px;--imaxw:92px;--ph:3px;--pv:2px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+[data-theme=light]{
+  color-scheme:light;
+  --bg:#FAFAFA;
+  --surface:#FFFFFF;
+  --surface-2:#F4F4F5;
+  --surface-3:#EBEBED;
+  --border:rgba(0,0,0,.08);
+  --border-strong:rgba(0,0,0,.14);
+  --text:#0A0A0C;
+  --muted:#6C6C74;
+  --faint:#9A9AA2;
+  --accent:#5563E8;
+  --accent-soft:rgba(85,99,232,.14);
+  --btn-pri-bg:#0A0A0C;
+  --btn-pri-bg-h:#000000;
+  --btn-pri-fg:#FFFFFF;
+  --preview-bg:#F4F4F5;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%}
+body{
+  margin:0;min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font:13px/1.5 var(--font);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+h2,p{margin:0}
+[hidden]{display:none!important}
+.ic{
+  width:15px;height:15px;flex:none;
+  stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.ic-glyph{display:inline-flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;font-size:14px;font-weight:600;line-height:1;stroke:none;fill:currentColor}
+.i{display:inline-flex;align-items:center;justify-content:center}
+
+/* top bar */
+header{
+  position:sticky;top:0;z-index:60;
+  display:flex;align-items:center;gap:12px;
+  height:52px;padding:0 16px;
+  background:color-mix(in srgb,var(--bg) 92%,transparent);
+  backdrop-filter:blur(12px) saturate(180%);
+  -webkit-backdrop-filter:blur(12px) saturate(180%);
+  border-bottom:1px solid var(--border);
+}
+.brand{
+  display:flex;align-items:center;gap:8px;
+  font-weight:600;font-size:13.5px;letter-spacing:-.01em;
+  margin-right:4px;flex:none;
+}
+.brand .i{
+  width:22px;height:22px;border-radius:5px;
+  background:var(--surface-3);
+  border:1px solid var(--border);
+  color:var(--accent);
+}
+.brand .i .ic{width:13px;height:13px}
+.sp{flex:1;min-width:0}
+.vr{width:1px;height:18px;background:var(--border);margin:0 2px;flex:none}
+.hint{font-size:12px;color:var(--muted);line-height:1.6}
+.hint b{color:var(--text);font-weight:600}
+.hint code{font-family:var(--mono);font-size:11px;background:var(--surface-2);padding:1px 5px;border-radius:4px;border:1px solid var(--border)}
+#fn{max-width:200px}
+
+/* buttons */
+button{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:30px;padding:0 10px;
+  font-size:12.5px;font-weight:500;
+  color:var(--text);
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:6px;
+  cursor:pointer;white-space:nowrap;
+  transition:background .12s,border-color .12s,color .12s,opacity .12s;
+}
+button:hover{background:var(--surface-2);border-color:var(--border-strong)}
+button:active{transform:translateY(.5px)}
+button:disabled{opacity:.3;pointer-events:none}
+button .ic{width:14px;height:14px;opacity:.85}
+button:hover .ic{opacity:1}
+button.pri{
+  background:var(--btn-pri-bg);color:var(--btn-pri-fg);
+  border-color:transparent;font-weight:600;
+}
+button.pri:hover{background:var(--btn-pri-bg-h);border-color:transparent}
+button.pri .ic{opacity:1}
+button.ib{width:30px;padding:0}
+button.sm{height:26px;padding:0 9px;font-size:12px;border-radius:5px}
+button.sm .ic{width:13px;height:13px}
+
+/* layout */
+main{
+  max-width:1160px;margin:0 auto;
+  padding:22px 20px 88px;
+  display:flex;flex-direction:column;gap:12px;
+}
+section{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:18px 20px;
+}
+section.stick{position:static;box-shadow:none}
+h2{
+  font-size:11px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);
+  margin:0 0 12px;
+}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* form controls */
+input[type=text],input[type=search],input[type=password],input:not([type]),select,textarea{
+  width:100%;min-width:0;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  color:var(--text);
+  font-size:13px;
+  padding:6px 10px;
+  outline:none;
+  transition:border-color .12s,box-shadow .12s;
+}
+input:hover,select:hover,textarea:hover{border-color:var(--border-strong)}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+select{
+  appearance:none;-webkit-appearance:none;
+  padding-right:28px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-repeat:no-repeat;
+  background-size:5px 5px,5px 5px;
+  background-position:calc(100% - 13px) 50%,calc(100% - 8px) 50%;
+}
+textarea{
+  font-family:var(--mono);font-size:12px;
+  line-height:1.55;resize:vertical;
+  padding:8px 10px;
+}
+input[type=color]{
+  -webkit-appearance:none;appearance:none;
+  width:30px;height:30px;padding:0;flex:none;
+  border:1px solid var(--border);border-radius:6px;
+  background:var(--surface-2);cursor:pointer;
+}
+input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
+input[type=color]::-moz-color-swatch{border:none;border-radius:4px}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  flex:1;min-width:40px;height:16px;
+  background:transparent;cursor:pointer;padding:0;border:none;
+}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:1.5px;background:var(--border-strong)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:11px;height:11px;margin-top:-4px;
+  border-radius:50%;background:var(--text);border:none;
+  transition:transform .12s;
+}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.15)}
+input[type=range]::-moz-range-track{height:3px;border-radius:1.5px;background:var(--border-strong)}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border:none;border-radius:50%;background:var(--text)}
+input[type=checkbox]{
+  -webkit-appearance:none;appearance:none;
+  width:28px;height:16px;padding:0;margin:0;flex:none;
+  border:none;border-radius:8px;
+  background:var(--surface-3);
+  position:relative;cursor:pointer;
+  transition:background .12s;
+}
+input[type=checkbox]::after{
+  content:"";position:absolute;top:2px;left:2px;
+  width:12px;height:12px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.4);
+  transition:left .12s;
+}
+input[type=checkbox]:checked{background:var(--accent)}
+input[type=checkbox]:checked::after{left:14px}
+.sw{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+.sw:hover{color:var(--text)}
+
+/* preview */
+.pv{background:var(--pvbg) center/cover;border-radius:8px}
+#stage{
+  padding:12px;min-height:64px;max-height:26vh;
+  overflow:auto;zoom:var(--z,1);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
+}
+#stage::-webkit-scrollbar{width:8px;height:8px}
+#stage::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:8px}
+.grp small{
+  display:block;margin:8px 2px 2px;
+  font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:rgba(255,255,255,.85);text-shadow:0 1px 3px rgba(0,0,0,.7);
+}
+.grp:first-child small{margin-top:0}
+.chip{
+  display:inline-flex;align-items:center;justify-content:center;
+  box-sizing:border-box;
+  height:var(--ch);padding:var(--pv) var(--ph);
+  border-radius:6px;margin:2px;
+  box-shadow:inset 0 0 0 1px var(--bd,transparent);
+  font-size:10px;
+}
+.chip img{height:var(--ih);min-width:var(--iminw);max-width:var(--imaxw);object-fit:contain;border-radius:5px;display:block}
+.chip i{
+  font-style:normal;background:rgba(0,0,0,.55);color:#fff;
+  border-radius:4px;padding:0 5px;font-size:10px;line-height:1.6;
+}
+body.glass .chip{
+  backdrop-filter:blur(14px) saturate(180%);
+  -webkit-backdrop-filter:blur(14px) saturate(180%);
+  box-shadow:
+    inset 0 0 0 1px var(--bd,transparent),
+    inset 0 1.5px 0 rgba(255,255,255,.55),
+    inset 0 -1px 0 rgba(255,255,255,.16),
+    inset 0 0 12px rgba(255,255,255,.10),
+    0 4px 14px rgba(0,0,0,.22);
+}
+
+/* cards */
+.card{
+  border:1px solid var(--border);
+  border-radius:10px;
+  margin:7px 0;
+  background:var(--surface-2);
+  transition:border-color .12s,background-color .12s;
+}
+.card:hover{border-color:var(--border-strong)}
+.card[open]{border-color:var(--border-strong);background:var(--surface)}
+.card.hit{box-shadow:0 0 0 1px var(--ok)}
+.card.svg-drop{outline:2px dashed var(--accent);outline-offset:-2px;background:var(--accent-soft)}
+.svg-upload-btn{display:inline-flex;align-items:center;gap:5px}
+.card>summary{
+  padding:10px 12px;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  list-style:none;cursor:pointer;user-select:none;
+}
+.card>summary::-webkit-details-marker{display:none}
+.pvw{
+  min-width:88px;height:32px;padding:4px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:6px;flex:none;
+}
+.nm{
+  flex:1;min-width:80px;
+  font-weight:500;font-size:13px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.gn{
+  font-size:11px;color:var(--muted);
+  border:1px solid var(--border);
+  padding:1px 8px;border-radius:20px;
+  white-space:nowrap;
+}
+.fields{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+  padding:16px 14px 16px;
+  border-top:1px solid var(--border);
+  margin-top:2px;
+}
+.fields label{
+  display:flex;flex-direction:column;gap:5px;
+  font-size:11.5px;color:var(--muted);
+}
+.fields label.wide{grid-column:1/-1}
+.fields label.sw{flex-direction:row;align-items:center;gap:8px;color:var(--text)}
+.col{display:flex;gap:6px;align-items:center;min-width:0}
+.col input[type=color]{width:30px;height:30px}
+.col input[type=range]{flex:1;min-width:50px}
+.col input[type=text]{
+  width:100px;flex:none;
+  font-family:var(--mono);font-size:11.5px;
+  padding:6px 8px;
+}
+.pct{
+  width:32px;flex:none;font-size:10.5px;text-align:right;
+  color:var(--faint);font-variant-numeric:tabular-nums;
+}
+
+/* groups */
+.grow{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:8px;align-items:end;
+  border-top:1px solid var(--border);
+  padding:10px 0;
+}
+.grow:first-child{border-top:0;padding-top:0}
+.grow label{
+  display:flex;flex-direction:column;gap:5px;
+  font-size:11.5px;color:var(--muted);min-width:0;
+}
+.grow button{align-self:end;color:var(--muted)}
+.grow button:hover{color:#F16A6A;border-color:rgba(241,106,106,.35)}
+
+/* misc */
+.empty{
+  padding:36px 16px;text-align:center;
+  color:var(--faint);font-size:13px;line-height:1.7;
+  border:1px dashed var(--border-strong);
+  border-radius:8px;
+}
+.empty b{color:var(--muted);font-weight:600}
+.warn{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:10px;padding:8px 12px;
+  font-size:12px;color:var(--warn);
+  background:rgba(251,191,36,.08);
+  border:1px solid rgba(251,191,36,.2);
+  border-radius:6px;
+}
+.warn .ic{width:14px;height:14px;flex:none}
+.warn button{margin-left:auto;color:var(--warn);border-color:rgba(251,191,36,.3)}
+.warn button:hover{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.5)}
+.st{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11.5px;color:var(--muted);
+}
+.st.ok{color:var(--ok)}
+.st.nt{color:var(--muted)}
+.st.wn{color:var(--warn)}
+.st .ic{width:13px;height:13px;flex:none}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:2px 8px;border-radius:20px;
+  font-size:11.5px;font-weight:500;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  color:var(--muted);
+}
+.pill .ic{width:12px;height:12px}
+.pill.ok{color:var(--ok);border-color:rgba(74,222,128,.28);background:rgba(74,222,128,.08)}
+
+/* notes/details */
+details>summary{list-style:none;cursor:pointer;user-select:none}
+details>summary::-webkit-details-marker{display:none}
+.notes>summary{display:flex;align-items:center;gap:8px}
+.notes>summary h2{margin:0;display:inline}
+.notes>summary::after{
+  content:'';
+  width:6px;height:6px;
+  border-right:1.5px solid var(--faint);
+  border-bottom:1.5px solid var(--faint);
+  transform:rotate(-45deg);
+  transition:transform .15s;
+  margin-left:auto;margin-top:-3px;
+}
+.notes[open]>summary::after{transform:rotate(45deg);margin-top:2px}
+.notes .body{
+  margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--border);
+}
+
+#toast{
+  position:fixed;left:50%;bottom:20px;
+  transform:translate(-50%,10px);
+  background:var(--text);color:var(--bg);
+  font-size:13px;font-weight:500;
+  padding:8px 14px;border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.3);
+  opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;
+  z-index:100;
+}
+#toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+
+/* responsive */
+@media(max-width:900px){
+  header .lb{display:none}
+  header .vr{margin:0}
+  #fn{display:none}
+}
+@media(max-width:760px){
+  header{height:auto;flex-wrap:wrap;padding:9px 12px;gap:7px}
+  header .sp{display:none}
+  header button{width:30px;padding:0}
+  header button .lb{display:none}
+  main{padding:12px 12px 64px;gap:11px}
+  section.stick{position:static;box-shadow:none}
+  .fields{grid-template-columns:1fr;padding:14px 12px}
+  .grow{grid-template-columns:1fr}
+  .gn{display:none}
+  .card>summary{gap:6px}
+  #stage{max-height:24vh}
+  .card[open]>summary{position:sticky;top:0;z-index:6;background:var(--surface);border-radius:8px;box-shadow:0 6px 14px rgba(0,0,0,.2)}
+}
+
+.imgrow{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.imgbox{width:124px;min-height:60px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:6px;padding:6px}
+.imgbox img{max-width:112px;max-height:64px;display:block;object-fit:contain}
+.imginfo{display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-width:0;flex:1}
+.imginfo .st{align-items:flex-start}
+
+
+/* Refined application shell and consistent component system */
+:root{--accent:#9098ff;--accent-soft:rgba(144,152,255,.15);--border:rgba(255,255,255,.075);--border-strong:rgba(255,255,255,.15)}
+[data-theme=light]{--accent:#5965dc;--accent-soft:rgba(89,101,220,.12);--border:rgba(20,20,30,.085);--border-strong:rgba(20,20,30,.16)}
+body{background:radial-gradient(900px 420px at 50% -180px,rgba(124,132,255,.09),transparent 70%),var(--bg);font-size:13.5px;line-height:1.55}
+.appbar{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:22px;min-height:68px;height:auto;padding:10px max(20px,calc((100vw - 1200px)/2));background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border-bottom:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,.07)}
+.brand{display:flex;align-items:center;gap:11px;flex:none;margin:0}
+.brand-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:var(--accent-soft);color:var(--accent);font-size:20px;font-weight:700}
+.brand-copy{display:flex;flex-direction:column;gap:1px;line-height:1.15}
+.brand-copy strong{font-size:13.5px;letter-spacing:-.025em;font-weight:650;color:var(--text)}
+.brand-copy small{font-size:9px;letter-spacing:.15em;font-weight:700;color:var(--faint)}
+.header-file{display:flex;align-items:center;gap:9px;min-width:0;flex:1;color:var(--muted);font-size:11.5px}
+#fn{max-width:min(34vw,320px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:550}
+.header-file-sep{color:var(--faint)}
+#cnt{white-space:nowrap;font-variant-numeric:tabular-nums}
+.header-actions{display:flex;align-items:center;gap:8px;flex:none}
+.header-actions>button,.header-menu>summary{height:38px;padding:0 14px;border-radius:9px;font-size:12.5px;font-weight:600}
+.header-open{background:var(--surface-2);border-color:var(--border-strong)}
+.header-menu{position:relative}
+.header-menu>summary{display:flex;align-items:center;gap:9px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;list-style:none;user-select:none}
+.header-menu>summary::-webkit-details-marker{display:none}
+.header-menu[open]>summary,.header-menu>summary:hover{background:var(--surface-2);color:var(--text);border-color:var(--border-strong)}
+.header-menu-panel{position:absolute;right:0;top:calc(100% + 9px);width:220px;padding:7px;background:var(--surface);border:1px solid var(--border-strong);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.28);z-index:100;display:flex;flex-direction:column;gap:2px}
+.header-menu-panel button{width:100%;height:36px;justify-content:space-between;padding:0 10px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--text);font-weight:500}
+.header-menu-panel button:hover{background:var(--surface-2)}
+.header-menu-panel kbd{font:10px var(--mono);color:var(--faint);border:1px solid var(--border);border-radius:4px;padding:2px 5px}
+.menu-label{padding:7px 9px 3px;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.13em}
+.menu-divider{height:1px;background:var(--border);margin:5px 3px}
+button{height:36px;padding:0 12px;border-radius:8px;font-size:12.5px}
+button.ib{width:36px;padding:0}button.sm{height:30px;padding:0 10px;border-radius:7px}button.pri{box-shadow:0 2px 8px rgba(0,0,0,.10)}
+main{max-width:1200px;padding:24px 22px 88px;gap:15px}
+.page-intro{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding:8px 2px 10px}
+.page-intro h1{font-size:clamp(25px,4vw,34px);line-height:1.12;letter-spacing:-.055em;font-weight:650;margin:5px 0 8px;color:var(--text)}
+.page-intro p{font-size:13px;color:var(--muted);max-width:620px}
+.eyebrow,.section-kicker{font-size:9.5px;font-weight:700;letter-spacing:.15em;color:var(--accent)}
+.intro-mark{display:flex;align-items:center;gap:8px;color:var(--faint);font-size:11px;white-space:nowrap;padding-bottom:3px}
+.mark-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(74,222,128,.10)}
+section{border-radius:13px;padding:18px 19px;background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 96%,white 4%),var(--surface));box-shadow:0 6px 24px rgba(0,0,0,.055)}
+section h2{font-size:10.5px;letter-spacing:.13em;margin-bottom:14px;color:var(--muted)}
+input[type=text],input[type=search],input[type=password],input:not([type]),select,textarea{border-radius:8px;padding:8px 11px;min-height:36px;background:color-mix(in srgb,var(--surface-2) 92%,transparent)}
+select{min-height:36px}
+input[type=color]{width:34px;height:34px;border-radius:8px}
+#stage{min-height:84px;max-height:30vh;padding:17px;border-radius:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.055),0 1px 2px rgba(0,0,0,.12)}
+.chip{margin:3px 4px 3px 0}
+.card{border-radius:10px;margin:7px 0;background:var(--surface-2);overflow:hidden}
+.card>summary{min-height:54px;padding:9px 12px;gap:10px}
+.card[open]>summary{background:color-mix(in srgb,var(--surface) 80%,var(--accent-soft));border-bottom:1px solid var(--border)}
+.card-actions{display:flex;align-items:center;gap:4px;flex:none;margin-left:auto}.card-actions button.ib{width:30px;height:30px}
+.pvw{min-width:96px;height:36px;border:1px solid var(--border);background:var(--preview-bg)}
+.nm{font-size:13.5px;font-weight:600;letter-spacing:-.015em}
+.fields{padding:16px;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.fields label,.grow label{font-size:11.5px;font-weight:550;gap:7px}
+.fields input:not([type]),.fields select{min-height:36px}.fields textarea{min-height:62px}
+.grow{padding:13px 0;gap:12px;grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) minmax(160px,1fr) auto}
+.grow button{height:34px}
+.imgbox{border:1px solid var(--border);background:var(--preview-bg)}
+.empty{border-radius:10px;padding:46px 18px;background:color-mix(in srgb,var(--surface-2) 65%,transparent)}
+.warn{border-radius:9px;padding:10px 12px}.pill{padding:5px 10px;border-radius:99px}.notes .body{padding-top:14px}
+#toast{bottom:24px;border-radius:10px;padding:10px 16px}
+.global-recolor-section{padding:20px 21px}
+.global-recolor-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.global-recolor-copy{min-width:0;max-width:660px}
+.global-recolor-copy h2{margin:5px 0 5px;font-size:14px;letter-spacing:-.02em;text-transform:none;color:var(--text)}
+.global-recolor-copy p{font-size:12px;color:var(--muted);max-width:610px}
+.svg-inventory{display:flex;align-items:baseline;gap:7px;white-space:nowrap;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}
+.svg-inventory strong{font-size:19px;line-height:1;font-variant-numeric:tabular-nums;color:var(--text)}
+.svg-inventory span{font-size:11px;color:var(--muted)}
+.svg-inventory small{display:block;margin-left:3px;font-size:10px;color:var(--faint)}
+.global-recolor-controls{display:flex;align-items:flex-end;gap:14px;margin-top:17px;padding-top:15px;border-top:1px solid var(--border)}
+.global-color-field{display:flex;flex-direction:column;gap:7px;flex:1;min-width:0;color:var(--muted);font-size:11px;font-weight:550}
+.global-color-inputs{display:flex;align-items:center;gap:10px;max-width:560px}
+.global-color-inputs input[type=color]{width:40px;height:38px;flex:none}
+.global-color-inputs input[type=range]{max-width:170px}
+.global-color-inputs input[type=text]{width:122px;flex:none;font-family:var(--mono);font-size:11px;letter-spacing:.01em}
+.global-color-inputs .pct{width:36px}
+.global-apply{height:38px;min-width:170px}
+.global-recolor-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
+.global-recolor-foot .hint{font-size:11px}
+.global-note{font-size:10px;color:var(--faint);text-align:right}
+.badge-add{margin-left:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:900px){.appbar{padding:9px 14px;gap:13px}.header-file{max-width:35vw}main{padding:18px 14px 70px}.grow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.appbar{min-height:62px;padding:9px 12px;gap:9px;flex-wrap:wrap}.brand{gap:8px}.brand-mark{width:31px;height:31px}.brand-copy strong{font-size:12.5px}.brand-copy small{font-size:8px}.header-file{display:none}.header-actions{margin-left:auto;gap:6px}.header-actions>button{width:auto}.header-actions>button,.header-menu>summary{height:36px;padding:0 10px;font-size:11.5px}.header-menu-panel{right:0}main{padding:14px 10px 60px;gap:12px}.page-intro{align-items:flex-start;flex-direction:column;gap:8px;padding:8px 2px}.page-intro h1{font-size:27px}.intro-mark{font-size:10.5px}section{padding:15px 13px;border-radius:11px}.fields{grid-template-columns:1fr;padding:13px}.grow{grid-template-columns:1fr}.card>summary{gap:7px}.pvw{min-width:74px}.nm{min-width:55px}.card>summary .sw{font-size:11px}.card>summary button.ib{width:28px;height:28px}.card-actions{gap:3px}.card-actions button.ib{width:27px;height:28px}.row{gap:7px}#stage{max-height:28vh;padding:12px}.global-recolor-section{padding:16px 13px}.global-recolor-top{flex-direction:column;gap:12px}.svg-inventory{align-self:flex-start}.global-recolor-controls{align-items:stretch;flex-direction:column;gap:12px}.global-color-inputs{max-width:none;gap:7px}.global-color-inputs input[type=range]{min-width:45px}.global-color-inputs input[type=text]{width:112px}.global-apply{width:100%}.global-recolor-foot{align-items:flex-start;flex-direction:column}.global-note{text-align:left}.badge-add{margin-left:auto}}
+@media(max-width:420px){.brand-copy strong{font-size:11px}.brand-copy small{display:none}.header-actions>button{width:auto}.header-actions>button,.header-menu>summary{padding:0 8px}.global-color-inputs{flex-wrap:wrap}.global-color-inputs input[type=range]{flex:1;min-width:60px}.global-color-inputs input[type=text]{width:104px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Compact premium pass */
+:root{--radius-card:10px}
+body{font-size:13px;line-height:1.45}
+main{max-width:1120px;padding:18px 20px 64px;gap:10px}
+section{padding:14px 16px;border-radius:11px;box-shadow:none;background:var(--surface)}
+.page-intro{padding:3px 2px 5px;align-items:center}
+.page-intro h1{font-size:27px;margin:3px 0 2px;letter-spacing:-.045em}
+.page-intro p{font-size:12px;line-height:1.4}
+.eyebrow{font-size:9px;letter-spacing:.13em}
+.intro-mark{font-size:10px;padding-bottom:0}
+section h2{margin-bottom:9px;font-size:10px;letter-spacing:.12em}
+.row{gap:7px}
+input[type=text],input[type=search],input[type=password],input:not([type]),select,textarea{min-height:32px;padding:6px 9px;border-radius:7px;font-size:12px}
+select{padding-right:25px}
+button{height:32px;border-radius:7px;padding:0 10px;font-size:12px}
+button.sm{height:29px;padding:0 9px}
+button.ib{width:29px;height:29px}
+#stage{min-height:68px;max-height:24vh;padding:12px;border-radius:8px}
+.preview-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.preview-toolbar h2{margin:0 auto 0 0}
+.preview-controls{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
+.preview-controls select{width:auto;max-width:150px;min-height:30px}
+.preview-controls #test{flex:1;min-width:160px}
+.preview-foot{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:6px}
+#setup{font-size:10.5px;margin:0!important}
+.preview-hint{font-size:10.5px;color:var(--faint);white-space:nowrap}
+.preset-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.preset-panel h2{margin:0;min-width:max-content}
+.preset-controls{display:flex;align-items:center;gap:7px;flex:1;min-width:260px}
+.preset-controls select{width:auto;min-width:140px;flex:1}
+.preset-hint{font-size:10.5px;margin:0 0 0 auto;white-space:nowrap}
+.global-recolor-section{padding:13px 16px}
+.global-recolor-top{align-items:center;gap:12px}
+.global-recolor-copy{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;max-width:none}
+.global-recolor-copy .section-kicker{font-size:8px}
+.global-recolor-copy h2{margin:0;font-size:12px;letter-spacing:-.01em}
+.global-recolor-copy p{font-size:10.5px;max-width:none}
+.svg-inventory{padding:5px 9px;border-radius:7px;gap:5px}
+.svg-inventory strong{font-size:16px}
+.svg-inventory small{font-size:9px}
+.global-recolor-controls{margin-top:9px;padding-top:9px;gap:10px;align-items:center}
+.global-color-field{display:flex;align-items:center;flex-direction:row;gap:10px}
+.global-color-field>span{font-size:10.5px;white-space:nowrap}
+.global-color-inputs{gap:7px;max-width:480px;flex:1}
+.global-color-inputs input[type=color]{width:30px;height:30px}
+.global-color-inputs input[type=range]{max-width:150px}
+.global-color-inputs input[type=text]{width:100px;min-height:30px}
+.global-color-inputs .pct{font-size:9.5px}
+.global-apply{min-width:140px;height:32px}
+.global-recolor-foot{margin-top:5px}
+.global-recolor-foot .hint,.global-note{font-size:10px;margin:0}
+.group-panel-head{display:flex;align-items:flex-start;gap:10px}
+.group-panel-head>.notes{flex:1;min-width:0}
+.group-panel-head>.notes>summary{display:flex;align-items:center;gap:8px;min-height:28px}
+.group-panel-head>.notes>summary h2{margin:0;color:var(--text);font-size:12px;letter-spacing:-.01em;text-transform:none;font-weight:600}
+.group-count{font-size:10px;color:var(--faint);padding:2px 7px;border:1px solid var(--border);border-radius:99px}
+.group-panel-head>#gadd{flex:none}
+.group-panel-head .notes .body{margin-top:9px;padding-top:9px}
+.grow{display:grid;grid-template-columns:minmax(130px,.9fr) minmax(210px,1.2fr) minmax(210px,1.2fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)}
+.grow:first-child{padding-top:0;border-top:0}
+.grow label{font-size:10px;font-weight:550;gap:4px}
+.grow .group-name-field{position:relative;display:flex;flex-direction:column;gap:4px}
+.group-name-field input{min-height:30px}
+.group-id{font:9px var(--mono);color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grow .color-field{min-width:0}
+.grow .col{gap:5px;min-width:0}
+.grow .col input[type=color]{width:27px;height:27px}
+.grow .col input[type=range]{min-width:35px}
+.grow .col input[type=text]{width:82px;min-height:28px;padding:4px 6px;font-size:10px}
+.grow .pct{width:27px;font-size:9px}
+.grow .group-delete{height:28px;color:var(--muted);padding:0 8px}
+.grow .group-delete:hover{color:#F16A6A}
+.badges-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.badges-toolbar h2{margin:0}
+.toolbar-meta{font-size:10px;color:var(--faint);padding-left:2px}
+.badges-toolbar .sp{flex:1}
+.badges-toolbar #gf{width:auto;min-width:125px;max-width:180px}
+.badges-toolbar #q{width:auto;flex:1;min-width:140px;max-width:230px}
+.badges-toolbar .badge-add{margin-left:0}
+.card{margin:5px 0;border-radius:8px;background:var(--surface-2)}
+.card>summary{min-height:43px;padding:6px 9px;gap:8px}
+.card[open]>summary{background:color-mix(in srgb,var(--surface) 88%,var(--accent-soft))}
+.pvw{min-width:76px;height:29px;padding:3px;border-radius:6px}
+.nm{font-size:12.5px;min-width:50px}
+.gn{font-size:9.5px;padding:1px 7px}
+.card>summary .sw{font-size:10.5px;gap:6px}
+.card>summary .sw input{transform:scale(.9)}
+.card-actions{gap:2px}
+.card-actions button.ib{width:26px;height:26px;border:0;background:transparent;color:var(--muted)}
+.card-actions button.ib:hover{background:var(--surface-3);color:var(--text)}
+.fields{padding:11px 12px 12px;gap:9px 11px;margin-top:0;grid-template-columns:repeat(4,minmax(0,1fr))}
+.fields label{font-size:10.5px;gap:4px;min-width:0}
+.fields input:not([type]),.fields select{min-height:30px;padding:5px 8px;font-size:11.5px}
+.fields textarea{min-height:48px;font-size:11px;padding:7px 8px}
+.fields .wide{grid-column:1/-1}
+.fields .color-field{min-width:0}
+.fields .col{gap:5px;min-width:0}
+.fields .col input[type=color]{width:27px;height:27px}
+.fields .col input[type=range]{min-width:30px}
+.fields .col input[type=text]{width:84px;min-height:28px;padding:4px 6px;font-size:10px}
+.fields .pct{width:26px;font-size:9px}
+.fields .field-preset{grid-column:span 2}
+.imgrow{gap:9px;padding-top:0}
+.imgbox{width:100px;min-height:50px;padding:4px}
+.imgbox img{max-width:92px;max-height:42px}
+.imginfo{gap:3px}
+.imginfo .st{font-size:10px}
+.empty{padding:28px 14px;font-size:12px}
+.notes .body{margin-top:8px;padding-top:9px;font-size:11px;line-height:1.55}
+.notes .body b{color:var(--text)}
+@media(max-width:900px){main{padding:16px 14px 56px}.grow{grid-template-columns:minmax(130px,1fr) minmax(180px,1fr);}.grow .group-delete{justify-self:end}.fields{grid-template-columns:repeat(2,minmax(0,1fr))}.fields .color-field{grid-column:span 1}}
+@media(max-width:760px){main{padding:12px 10px 48px;gap:9px}.page-intro{padding:2px 2px 4px;gap:5px}.page-intro h1{font-size:24px;margin:1px 0}.page-intro p{font-size:11px}.intro-mark{font-size:9px}section{padding:12px 11px;border-radius:9px}.preview-toolbar{gap:6px}.preview-controls{flex-wrap:wrap}.preview-controls select{flex:1;max-width:none;min-width:105px}.preview-controls #test{flex-basis:100%;min-width:0}.preview-foot{align-items:flex-start;flex-direction:column;gap:2px}.preview-hint{white-space:normal}.preset-panel{gap:7px}.preset-panel h2{width:100%}.preset-controls{min-width:0;width:100%}.preset-controls select{min-width:0}.preset-hint{margin:0;width:100%}.global-recolor-copy{gap:6px 9px}.global-recolor-copy p{flex-basis:100%}.global-color-field{flex-wrap:wrap;gap:5px;width:100%}.global-color-inputs{width:100%}.global-color-inputs input[type=range]{min-width:60px}.global-recolor-foot{align-items:flex-start;flex-direction:column;gap:2px}.group-panel-head{gap:8px}.grow{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:8px 0}.grow .group-name-field{grid-column:1/-1}.grow .group-delete{grid-column:2;grid-row:3}.grow .color-field{grid-row:2}.grow .col input[type=text]{width:76px}.badges-toolbar{gap:6px}.badges-toolbar h2{margin-right:0}.badges-toolbar .sp{display:none}.badges-toolbar #gf{flex:1;min-width:0;max-width:none}.badges-toolbar #q{flex:1.2;min-width:110px;max-width:none}.badges-toolbar .badge-add{width:auto;margin-left:auto}.card>summary{gap:5px;padding:6px}.pvw{min-width:56px;height:27px}.nm{font-size:11.5px;min-width:35px}.gn{display:none}.card>summary .sw{font-size:9.5px}.card-actions button.ib{width:23px;height:24px;padding:0}.card-actions{gap:0}.fields{grid-template-columns:repeat(2,minmax(0,1fr));padding:9px;gap:8px}.fields .wide{grid-column:1/-1}.fields .color-field{grid-column:1/-1}.fields .field-preset{grid-column:1/-1}.fields .col input[type=range]{min-width:40px}.fields .col input[type=text]{width:90px}.imgbox{width:82px;min-height:45px}.imgbox img{max-width:74px;max-height:38px}}
+@media(max-width:390px){.brand-copy strong{font-size:11px}.header-actions>button,.header-menu>summary{height:32px;padding:0 8px;font-size:10.5px}.badges-toolbar #gf{flex-basis:calc(50% - 4px)}.badges-toolbar #q{flex-basis:calc(50% - 4px)}.card>summary .sw{font-size:0;gap:0}.card>summary .sw input{transform:scale(.85)}.card-actions button.ib{width:21px}.fields .col input[type=text]{width:80px}}
+
+
+/* Color controls stay compact while exposing an independent opacity slider per badge color. */
+.grow .col input[type=range],.fields .col input[type=range],.grow .pct,.fields .pct{display:none!important}
+.grow .col input[type=text],.fields .col input[type=text]{width:92px;min-height:29px;padding:4px 7px;font-size:10.5px;flex:1;min-width:0}
+.group-name-caption{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.group-id{font-size:9px;color:var(--faint);font-family:var(--mono);font-weight:400}
+.fields .color-field{grid-column:span 1}
+/* Per-badge alpha control: keep picker + ARGB on the first row and opacity below. */
+.fields .col{display:grid;grid-template-columns:30px minmax(0,1fr);gap:6px;}
+.fields .col .alpha-row{grid-column:1/-1;display:flex;align-items:center;gap:9px;min-width:0;padding:1px 2px 0;}
+.fields .col .alpha-row input[type=range]{display:block!important;flex:1;min-width:0;width:100%;}
+.fields .col .alpha-row .pct{display:inline-block!important;width:37px;flex:none;text-align:right;font:10px var(--mono);color:var(--muted);}
+.fields .col input[type=text]{width:100%;min-width:0;}
+@media(max-width:900px){.fields .color-field{grid-column:span 1}}
+@media(max-width:760px){.fields .color-field{grid-column:span 1}.grow .col input[type=text]{width:76px}}
+
+
+/* Group editor: full-width ID/name fields, explicit order controls, no group color fields. */
+.groups-panel,.group-panel-head,#gd,#groups,.group-panel-head .body{width:100%;min-width:0}
+.group-panel-head{position:relative;display:block;width:100%}
+.group-panel-head>.notes{display:block;width:100%;min-width:0}
+.group-panel-head>.notes>summary{padding-right:104px;min-height:31px}
+.group-panel-head>#gadd{position:absolute;right:0;top:0;z-index:2}
+.group-panel-head .notes .body{width:100%;min-width:0}
+#groups{display:flex;flex-direction:column;gap:0}
+.grow{width:100%;min-width:0;display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr) auto;gap:9px;align-items:end;padding:9px 0;border-top:1px solid var(--border)}
+.grow:first-child{padding-top:0;border-top:0}
+.grow>label{display:flex;flex-direction:column;grid-column:auto;gap:4px;min-width:0;width:100%;font-size:10px;font-weight:550;color:var(--muted)}
+.grow .group-name-field{grid-column:auto}
+.grow>label input{width:100%;min-width:0;min-height:32px}
+.group-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}
+.group-actions .group-move{width:27px;height:29px;padding:0;font-size:14px;color:var(--muted)}
+.group-actions .group-delete{height:29px;padding:0 8px;color:var(--muted)}
+.group-actions .group-delete:hover{color:#F16A6A}
+.group-id-field input{font-family:var(--mono);font-size:11px}
+@media(max-width:760px){
+ .group-panel-head>.notes>summary{padding-right:92px}
+ .group-panel-head>#gadd{height:28px;padding:0 7px;font-size:10px}
+ .grow{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) auto;gap:6px;padding:8px 0}
+ .grow>label input{min-height:31px;padding:5px 7px;font-size:11px}
+ .group-actions{gap:2px}
+ .group-actions .group-move{width:24px;height:28px}
+ .group-actions .group-delete{height:28px;padding:0 6px;font-size:10px}
+}
+@media(max-width:390px){
+ .grow{grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr) auto;gap:5px}
+ .group-actions .group-move{width:22px}
+ .group-actions .group-delete{padding:0 5px;font-size:9.5px}
+}
+
+
+
+/* Focused tools: health checks, multi-pack merge and group-level bulk editing. */
+.modal-backdrop{position:fixed;inset:0;z-index:220;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.62);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+.modal-backdrop.show{display:flex}
+.modal-card{width:min(650px,100%);max-height:min(88dvh,820px);overflow:auto;margin:0;padding:19px;border:1px solid var(--border-strong);border-radius:15px;background:var(--surface);box-shadow:0 24px 80px rgba(0,0,0,.42);display:flex;flex-direction:column;gap:14px}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.modal-head h2{margin:4px 0 5px;color:var(--text);font-size:17px;letter-spacing:-.035em;text-transform:none}
+.modal-head .section-kicker{font-size:9px}
+.modal-subtitle{max-width:520px;color:var(--muted);font-size:11.5px;line-height:1.5}
+.modal-head>.ib{width:31px;height:31px;flex:none;font-size:19px}
+.modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid var(--border)}
+.modal-foot>.hint{max-width:330px;font-size:10.5px}
+.modal-buttons{display:flex;align-items:center;gap:7px;flex:none}
+.health-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.health-stat{padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}
+.health-stat b{display:block;font-size:20px;line-height:1.2;font-variant-numeric:tabular-nums}
+.health-stat span{font-size:10px;color:var(--muted)}
+.health-stat.err b{color:#F87171}.health-stat.warn b{color:#FBBF24}.health-stat.ok b{color:var(--ok)}
+.health-list{display:flex;flex-direction:column;gap:7px;max-height:43vh;overflow:auto}
+.health-item{display:grid;grid-template-columns:62px minmax(0,1fr);gap:9px;padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}
+.health-severity{align-self:start;padding:3px 6px;border-radius:5px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.health-severity.error{color:#FCA5A5;background:rgba(248,113,113,.12)}.health-severity.warning{color:#FCD34D;background:rgba(251,191,36,.12)}.health-severity.info{color:#A5B4FC;background:rgba(129,140,248,.12)}
+.health-item b{display:block;font-size:11.5px;font-weight:650}.health-item p{margin-top:2px;color:var(--muted);font-size:10.5px;line-height:1.45;overflow-wrap:anywhere}
+.health-empty{padding:18px 12px;text-align:center;border:1px dashed var(--border-strong);border-radius:9px;color:var(--ok);font-size:12px}
+.merge-picker,.bulk-field{display:flex;flex-direction:column;gap:6px;min-width:0;color:var(--muted);font-size:11px;font-weight:600}
+.merge-picker{padding:12px;border:1px dashed var(--border-strong);border-radius:10px;background:var(--surface-2)}
+.merge-picker input{width:100%;min-width:0;font-size:11px}
+.merge-link-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+.merge-link-field{display:flex;flex-direction:column;gap:6px;min-width:0;color:var(--muted);font-size:11px;font-weight:600}
+.merge-link-field input{width:100%;min-width:0;height:34px;font-size:11px;font-family:var(--mono)}
+.merge-link-field small{color:var(--faint);font-size:10px;font-weight:400}
+#merge-add-url{height:34px;padding:0 13px}
+.merge-picker small,.bulk-field small{color:var(--faint);font-size:10px;font-weight:400}
+.merge-file-list{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow:auto}
+.merge-file-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.merge-file-row b{display:block;max-width:390px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.merge-file-row small{display:block;color:var(--muted);font-size:10px}
+.merge-file-row .merge-bad{color:#FCA5A5}
+.merge-empty{padding:13px;text-align:center;border:1px dashed var(--border);border-radius:8px;color:var(--faint);font-size:11px}
+.merge-mode-field{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:11px;font-weight:600}
+.merge-notice{padding:9px 11px;border-radius:8px;background:var(--accent-soft);color:var(--muted);font-size:10.5px;line-height:1.5}
+.bulk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bulk-field input,.bulk-field select{width:100%;min-width:0}
+.bulk-svg{grid-column:1/-1}
+.group-actions .group-bulk{height:29px;padding:0 8px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 25%,var(--border));font-size:10px}
+.group-actions .group-bulk:hover{background:var(--accent-soft)}
+@media(max-width:760px){.modal-card{padding:15px;max-height:92dvh}.modal-foot{align-items:stretch;flex-direction:column}.modal-foot>.hint{max-width:none}.modal-buttons{justify-content:flex-end}.health-stats{gap:5px}.health-stat{padding:8px}.health-stat b{font-size:17px}.health-item{grid-template-columns:55px minmax(0,1fr)}.bulk-grid{grid-template-columns:1fr 1fr;gap:9px}.grow .group-actions{grid-column:1/-1;justify-content:flex-end}.group-actions .group-bulk{font-size:9.5px;padding:0 7px}}
+@media(max-width:520px){.merge-link-row{grid-template-columns:1fr}.merge-link-row #merge-add-url{width:100%}}
+@media(max-width:390px){.modal-card{padding:12px}.modal-head h2{font-size:15px}.bulk-grid{grid-template-columns:1fr}.bulk-svg{grid-column:auto}.health-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.merge-file-row b{max-width:205px}}
+
+/* Mobile: hide the intro heading block (eyebrow, title, subtitle) */
+@media(max-width:760px){.page-intro>div:first-child{display:none}}
+
+/* ---- Publish to Gist ---- */
+.gist-form{display:flex;flex-direction:column;gap:12px}
+.gist-form .merge-link-field input{height:34px}
+.gist-form .merge-link-row>button{height:34px}
+.gist-warn{font-size:11px;line-height:1.55;color:var(--muted);padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}
+.gist-warn b{color:var(--warn);font-weight:600}
+.gist-result{display:flex;flex-direction:column;gap:11px;padding:12px;border:1px solid var(--border-strong);border-radius:11px;background:var(--surface-2)}
+.gist-result .ok{color:var(--ok);font-weight:600;font-size:12px}
+.gist-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:end}
+.gist-row label{display:flex;flex-direction:column;gap:5px;min-width:0;color:var(--muted);font-size:11px;font-weight:600}
+.gist-row input{width:100%;min-width:0;height:34px;font-family:var(--mono);font-size:11px}
+.gist-row button{height:34px}
+#gist-status.err{color:#F87171}
+#gist-status.good{color:var(--ok)}
+@media(max-width:520px){.gist-row{grid-template-columns:1fr 1fr}.gist-row label{grid-column:1/-1}}
+/* mobile: modal footer buttons wrap/stack instead of overflowing off-screen */
+@media(max-width:760px){.modal-buttons{flex-wrap:wrap;max-width:100%}.modal-buttons>button{min-width:0}}
+@media(max-width:520px){.modal-buttons{flex-direction:column-reverse;align-items:stretch;width:100%}.modal-buttons>button{width:100%;height:auto;min-height:38px;padding-top:7px;padding-bottom:7px;white-space:normal;line-height:1.25}}
+/* the generic .warn banner style leaked into the Warnings stat tile; keep it a normal tile */
+.health-stat.warn{display:block;margin-top:0;font-size:inherit;color:inherit;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+@media(max-width:760px){.health-stat.warn{padding:8px}}
+
+</style>
+
+</head>
+<body data-bg="mesh">
+<header class="appbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">◈</span>
+    <span class="brand-copy"><strong>Nuvio Badge Studio</strong><small>NUVIO / FUSION</small></span>
+  </div>
+  <div class="header-file" aria-live="polite">
+    <span id="fn">nuvio-badges.json</span>
+    <span class="header-file-sep">·</span>
+    <span id="cnt">0 badges · 0 groups</span>
+  </div>
+  <div class="header-actions">
+    <button id="open" class="header-open" title="Open a badge JSON file">Open JSON</button>
+    <input type="file" id="file" accept=".json,application/json" hidden>
+    <details class="header-menu" id="header-menu">
+      <summary aria-label="More actions" title="More actions">More <span aria-hidden="true">⌄</span></summary>
+      <div class="header-menu-panel">
+        <div class="menu-label">FILE</div>
+        <button id="url" type="button">Load from link</button>
+        <button id="merge-open" type="button">Import / merge packs</button>
+        <button id="health-open" type="button">Pre-export health check</button>
+        <button id="new" type="button">New configuration</button>
+        <button id="cp" type="button">Copy JSON</button>
+        <button id="gist-open" type="button">Publish to Gist</button>
+        <div class="menu-divider"></div>
+        <div class="menu-label">EDIT</div>
+        <button id="undo" type="button" disabled>Undo <kbd>Ctrl Z</kbd></button>
+        <button id="redo" type="button" disabled>Redo <kbd>Ctrl Shift Z</kbd></button>
+        <div class="menu-divider"></div>
+        <button id="th" type="button">Switch appearance</button>
+      </div>
+    </details>
+    <button class="pri" id="dl" title="Download edited JSON">Export JSON</button>
+  </div>
+</header>
+<main>
+<div class="page-intro">
+  <div><div class="eyebrow">NUVIO / FUSION CONFIGURATION</div><h1>Badge Studio</h1><p>Edit badge rules, artwork and styles.</p></div>
+  <div class="intro-mark"><span class="mark-dot"></span><span>Local editor · JSON stays on your device</span></div>
+</div>
+
+<section class="preview-section">
+  <div class="preview-toolbar">
+    <h2>Preview</h2>
+    <div class="preview-controls">
+      <select id="bg" aria-label="Preview background"><option value="mesh">Mesh</option><option value="dark">Dark</option><option value="light">Light</option><option value="img">Image URL…</option></select>
+      <select id="sz" aria-label="Preview size"><option value="stream">Stream</option><option value="player">Player</option><option value="preview">Settings</option></select>
+      <select id="zm" aria-label="Preview zoom"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select>
+      <label class="sw"><input type="checkbox" id="gl"><span>Glass</span></label>
+      <input id="test" placeholder="Test a release title…">
+    </div>
+  </div>
+  <div id="stage" class="pv"></div>
+  <div class="preview-foot"><p class="hint" id="setup"></p><span class="preview-hint">Blank = all · Text = first match per group</span></div>
+  <div id="issues"></div>
+</section>
+
+<section class="preset-section">
+  <div class="preset-panel">
+    <h2>Style presets</h2>
+    <div class="preset-controls"><select id="pre" aria-label="Style preset"></select><select id="scope" aria-label="Apply preset to"></select><button id="apply" class="pri">Apply</button></div>
+    <p class="hint preset-hint">Fill and border only.</p>
+  </div>
+</section>
+
+<section class="global-recolor-section" aria-labelledby="global-recolor-title">
+  <div class="global-recolor-top">
+    <div class="global-recolor-copy">
+      <div class="section-kicker">ARTWORK</div>
+      <h2 id="global-recolor-title">Global SVG color</h2>
+      <p>Set one color for every SVG badge.</p>
+    </div>
+    <div class="svg-inventory" aria-live="polite">
+      <strong id="global-svg-count">0</strong>
+      <span>SVGs</span>
+      <small id="global-svg-breakdown">0 embedded · 0 linked</small>
+    </div>
+  </div>
+  <div class="global-recolor-controls">
+    <label class="global-color-field">
+      <span>Artwork color</span>
+      <div class="global-color-inputs">
+        <input type="color" id="global-svg-color" value="#FFFFFF" aria-label="SVG artwork color">
+        <input type="range" id="global-svg-alpha" min="0" max="255" value="255" aria-label="SVG artwork opacity">
+        <span class="pct" id="global-svg-alpha-label">100%</span>
+        <input type="text" id="global-svg-hex" value="#FFFFFFFF" spellcheck="false" aria-label="SVG artwork ARGB color">
+      </div>
+    </label>
+    <button class="pri global-apply" id="global-svg-apply" type="button" disabled>Recolor all SVGs</button>
+  </div>
+  <div class="global-recolor-foot">
+    <p class="hint" id="global-svg-status" role="status" aria-live="polite">SVG artwork only · raster images are skipped.</p>
+    <span class="global-note">Fill and border stay unchanged.</span>
+  </div>
+</section>
+
+<section class="groups-panel">
+  <div class="group-panel-head">
+    <details id="gd" class="notes">
+      <summary><h2>Groups</h2><span class="group-count" id="group-meta">0 groups</span></summary>
+      <div class="body"><div id="groups"></div></div>
+    </details>
+    <button id="gadd" class="sm" type="button">+ Add group</button>
+  </div>
+</section>
+
+<section>
+<div class="badges-toolbar">
+  <h2>Badges</h2>
+  <span class="toolbar-meta">Priority order</span>
+  <span class="sp"></span>
+  <select id="gf" style="width:auto"></select>
+  <input id="q" placeholder="Search badges…" style="flex:1;min-width:150px;max-width:260px">
+  <button id="add" class="pri badge-add" type="button">+ Add badge</button>
+</div>
+<div id="list"></div>
+</section>
+
+<section>
+<details class="notes">
+  <summary><h2>Format & compatibility notes</h2></summary>
+  <div class="hint body">
+  <b>JSON</b><br>
+  • Exports <code>groups</code> first, then <code>filters</code>; other top-level fields are preserved.<br>
+  • Colors accept <code>#RRGGBB</code> and Android-style <code>#AARRGGBB</code>.<br>
+  • Filter order sets priority. Preview uses the first match in each group.<br>
+  <b>Images & color</b><br>
+  • Direct SVG links are fetched, sanitized, recolored and embedded when CORS permits. Failed links are kept.<br>
+  • <b>Upload SVG</b> on a badge (or drop an .svg onto its card) sanitizes the file, applies the SVG artwork color and embeds it as base64.<br>
+  • <code>textColor</code> changes SVG artwork; <code>tagColor</code> and <code>borderColor</code> control the chip.<br>
+  • Raster images are not recolored. Remote previews need an available image URL.<br>
+  <b>Editor</b><br>
+  • Ctrl/Cmd+Z undoes. The session autosaves in this browser.<br>
+  • Preview regex uses JavaScript; advanced patterns may differ from Android/Kotlin regex.
+  </div>
+</details>
+</section>
+
+</main>
+
+<div class="modal-backdrop" id="health-modal" aria-hidden="true">
+  <section class="modal-card health-card" role="dialog" aria-modal="true" aria-labelledby="health-title">
+    <div class="modal-head"><div><div class="section-kicker">PRE-EXPORT CHECK</div><h2 id="health-title">Configuration health</h2><p class="modal-subtitle" id="health-summary">Checking configuration…</p></div><button class="ib" type="button" data-modal-close="health" aria-label="Close">×</button></div>
+    <div class="health-stats" id="health-stats"></div>
+    <div class="health-list" id="health-list"></div>
+    <div class="modal-foot"><span class="hint" id="health-footnote">Errors must be fixed before export. Warnings can be reviewed and accepted.</span><div class="modal-buttons"><button type="button" data-modal-close="health">Close</button><button type="button" id="health-gist" hidden>Publish to Gist</button><button class="pri" type="button" id="health-continue" hidden>Continue</button></div></div>
+  </section>
+</div>
+
+<div class="modal-backdrop" id="gist-modal" aria-hidden="true">
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="gist-title">
+    <div class="modal-head"><div><div class="section-kicker">PUBLISH</div><h2 id="gist-title">Publish to GitHub Gist</h2><p class="modal-subtitle">Creates a <b>public</b> gist from the current configuration, copies its raw URL and opens it in a new tab.</p></div><button class="ib" type="button" data-modal-close="gist" aria-label="Close">×</button></div>
+    <div class="gist-form" id="gist-form">
+      <div class="merge-link-row">
+        <label class="merge-link-field"><span>GitHub token</span><input id="gist-token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_… or ghp_…"></label>
+        <button type="button" id="gist-forget">Forget token</button>
+      </div>
+      <p class="hint">Use a fine-grained token with <b>Account permissions → Gists: Read and write</b> (or a classic token with the <code>gist</code> scope). It is sent only to <code>api.github.com</code>. GitHub does not allow anonymous gists.</p>
+      <label class="merge-link-field"><span>File name in the gist</span><input id="gist-name" type="text" autocomplete="off" spellcheck="false" placeholder="nuvio-badges.json"></label>
+      <label class="merge-link-field"><span>Description (optional)</span><input id="gist-desc" type="text" autocomplete="off" placeholder="Nuvio badge configuration"></label>
+      <label class="sw"><input type="checkbox" id="gist-remember"><span>Remember token on this device</span></label>
+      <p class="gist-warn"><b>Public.</b> Anyone with the link can read this file and it shows on your GitHub profile. Embedded SVG data and image URLs in the JSON are included. Each publish creates a new gist.</p>
+      <div class="gist-result" id="gist-result" hidden>
+        <div class="ok">Published</div>
+        <div class="gist-row"><label><span>Raw URL (always latest)</span><input id="gist-raw" type="text" readonly></label><button type="button" class="sm" data-gist-copy="gist-raw">Copy</button><button type="button" class="sm" data-gist-open="gist-raw">Open</button></div>
+        <div class="gist-row"><label><span>Raw URL pinned to this version</span><input id="gist-pinned" type="text" readonly></label><button type="button" class="sm" data-gist-copy="gist-pinned">Copy</button><button type="button" class="sm" data-gist-open="gist-pinned">Open</button></div>
+        <div class="gist-row"><label><span>Gist page</span><input id="gist-page" type="text" readonly></label><button type="button" class="sm" data-gist-copy="gist-page">Copy</button><button type="button" class="sm" data-gist-open="gist-page">Open</button></div>
+      </div>
+    </div>
+    <div class="modal-foot"><span class="hint" id="gist-status" role="status">Ready to publish.</span><div class="modal-buttons"><button type="button" data-modal-close="gist">Close</button><button class="pri" type="button" id="gist-publish">Publish public gist</button></div></div>
+  </section>
+</div>
+
+<div class="modal-backdrop" id="merge-modal" aria-hidden="true">
+  <section class="modal-card merge-card" role="dialog" aria-modal="true" aria-labelledby="merge-title">
+    <div class="modal-head"><div><div class="section-kicker">MULTI-PACK IMPORTER</div><h2 id="merge-title">Import and merge badge packs</h2><p class="modal-subtitle">Add multiple public JSON links or choose local Nuvio / Fusion JSON files. Imported filters are appended after existing filters, preserving current priority.</p></div><button class="ib" type="button" data-modal-close="merge" aria-label="Close">×</button></div>
+    <div class="merge-link-row">
+      <label class="merge-link-field"><span>Import from URL</span><input id="merge-url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://raw.githubusercontent.com/user/repo/main/badges.json"><small>Paste a direct public JSON URL. You can add multiple links, one at a time.</small></label>
+      <button id="merge-add-url" type="button">Add link</button>
+    </div>
+    <label class="merge-picker"><span>Or select JSON files</span><input id="merge-files" type="file" accept=".json,application/json" multiple><small>Files and links can be combined in the same import.</small></label>
+    <div class="merge-file-list" id="merge-file-list"><div class="merge-empty">No packs selected yet.</div></div>
+    <label class="merge-mode-field"><span>Import strategy</span><select id="merge-mode"><option value="merge">Merge into current configuration</option><option value="replace">Replace current configuration with these packs</option></select></label>
+    <div class="merge-notice" id="merge-notice">Groups with the same ID and name are combined. Conflicting IDs are renamed and badge references are updated. Imported filters are appended; current settings are kept.</div>
+    <div class="modal-foot"><span class="hint" id="merge-status" role="status">Existing filters keep their current priority.</span><div class="modal-buttons"><button type="button" data-modal-close="merge">Cancel</button><button class="pri" type="button" id="merge-apply" disabled>Import selected packs</button></div></div>
+  </section>
+</div>
+
+<div class="modal-backdrop" id="bulk-modal" aria-hidden="true">
+  <section class="modal-card bulk-card" role="dialog" aria-modal="true" aria-labelledby="bulk-title">
+    <div class="modal-head"><div><div class="section-kicker">GROUP-LEVEL EDITING</div><h2 id="bulk-title">Bulk edit badges</h2><p class="modal-subtitle" id="bulk-subtitle">Apply one change to all badges in a group.</p></div><button class="ib" type="button" data-modal-close="bulk" aria-label="Close">×</button></div>
+    <label class="bulk-field"><span>Group</span><select id="bulk-group"></select></label>
+    <div class="bulk-grid">
+      <label class="bulk-field"><span>Enabled state</span><select id="bulk-enabled"><option value="keep">Do not change</option><option value="enable">Enable all</option><option value="disable">Disable all</option></select></label>
+      <label class="bulk-field"><span>Tag style</span><select id="bulk-style"><option value="">Do not change</option><option value="filled">Filled</option><option value="bordered">Bordered</option><option value="filled and bordered">Filled and bordered</option></select></label>
+      <label class="bulk-field"><span>Fill color · ARGB</span><input id="bulk-fill" type="text" placeholder="#CCFFFFFF" spellcheck="false"></label>
+      <label class="bulk-field"><span>Border color · ARGB</span><input id="bulk-border" type="text" placeholder="#80FFFFFF" spellcheck="false"></label>
+      <label class="bulk-field bulk-svg"><span>SVG artwork color · ARGB</span><input id="bulk-svg" type="text" placeholder="#FFFFFFFF" spellcheck="false"><small>Only SVG badges are recolored. Raster images are unchanged.</small></label>
+    </div>
+    <div class="modal-foot"><span class="hint" id="bulk-status">Leave a field blank to keep that property unchanged.</span><div class="modal-buttons"><button type="button" data-modal-close="bulk">Cancel</button><button class="pri" type="button" id="bulk-apply">Apply to group</button></div></div>
+  </section>
+</div>
+
+<div id="toast"></div>
+
+
+<script>
+const $=s=>document.querySelector(s);
+const IC={logo:'◈',open:'↥',link:'↗',file:'＋',undo:'↶',redo:'↷',plus:'＋',theme:'◐',copy:'⧉',down:'↓',up:'↑',dn:'↓',trash:'×',alert:'!',check:'✓',info:'i'};
+const ic=n=>'<span class="ic ic-glyph" aria-hidden="true">'+(IC[n]||'·')+'</span>';
+document.querySelectorAll('[data-ic]').forEach(e=>e.innerHTML=ic(e.dataset.ic));
+let S={filters:[],groups:[],extra:{},hg:true},fname='nuvio-badges.json';
+const OP=new WeakSet();
+const SVG_ERRORS=new WeakMap(),TEXT_COLOR_TIMERS=new WeakMap();
+let LOAD_SEQ=0,IMPORT_EMBEDDING=false;
+const H=n=>(+n).toString(16).padStart(2,'0').toUpperCase();
+const groupRecord=g=>({id:String(g?.id??''),name:String(g?.name??''),isExpanded:g?.isExpanded!==false});
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function parse(c){c=String(c??'').trim().replace(/^#+/,'');
+ if(/^[0-9a-f]{6}$/i.test(c))return{rgb:c.toUpperCase(),a:255};
+ if(/^[0-9a-f]{8}$/i.test(c))return{rgb:c.slice(2).toUpperCase(),a:parseInt(c.slice(0,2),16)};
+ return{rgb:'000000',a:0,bad:1}}
+const mk=(rgb,a)=>'#'+H(a)+rgb;
+function css(c){const p=parse(c),n=i=>parseInt(p.rgb.slice(i,i+2),16);return`rgba(${n(0)},${n(2)},${n(4)},${(p.a/255).toFixed(3)})`}
+function rx(p){let fl='',m;while((m=p.match(/^\(\?([a-z]+)\)/))){fl+=m[1];p=p.slice(m[0].length)}
+ return new RegExp(p,[...new Set(fl)].filter(c=>'ims'.includes(c)).join(''))}
+const gname=id=>(S.groups.find(g=>g.id===id)||{}).name||id||'(none)';
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2600)}
+
+function chip(f){const e=document.createElement('span');e.className='chip';
+ if(String(f.tagStyle||'').toLowerCase()==='filled'&&!parse(f.tagColor).bad)e.style.background=css(f.tagColor);
+ if(!parse(f.borderColor).bad)e.style.setProperty('--bd',css(f.borderColor));
+ const ph=()=>{const i=document.createElement('i');i.textContent=(f.name||f.id||'?')+' (no image)';i.title='No usable badge image URL';return i};
+ const src=String(f.imageURL||'').trim();e.title=(f.name?f.name+' · ':'')+(src||'No image URL');
+ if(src){const i=new Image();i.alt=f.name||'';i.decoding='async';i.referrerPolicy='no-referrer';i.src=src;i.onerror=()=>i.replaceWith(ph());e.append(i)}else e.append(ph());
+ return e}
+
+function stage(){stage0();setupNote()}
+function stage0(){const st=$('#stage'),t=$('#test').value;st.innerHTML='';document.querySelectorAll('.card.hit').forEach(c=>c.classList.remove('hit'));
+ const on=S.filters.filter(f=>f.isEnabled!==false);
+ if(!S.filters.length){st.innerHTML='<span class="hint" style="color:rgba(255,255,255,.55)">Open a badge JSON file to begin</span>';return}
+ if(t){const claimed=new Set(),hit=[];on.forEach((f,idx)=>{if(!String(f.name||'').trim()||!String(f.pattern||'').trim())return;
+  try{if(rx(f.pattern).test(t)){const key=f.groupId?String(f.groupId):'__ungrouped__'+(f.id||idx);if(!claimed.has(key)){claimed.add(key);hit.push(f)}}}catch(e){}});
+  hit.forEach(f=>st.append(chip(f)));document.querySelectorAll('.card').forEach(c=>{if(hit.includes(S.filters[c.dataset.i]))c.classList.add('hit')});if(!hit.length)st.innerHTML='<span class="hint" style="color:rgba(255,255,255,.55)">No badge matches</span>';return}
+ [...new Set([...S.groups.map(g=>g.id),...on.map(f=>f.groupId)])].forEach(id=>{
+  const fs=on.filter(f=>f.groupId===id);if(!fs.length)return;
+  const g=document.createElement('div');g.className='grp';g.innerHTML='<small>'+esc(gname(id))+'</small>';
+  fs.forEach(f=>g.append(chip(f)));st.append(g)})}
+
+function colF(t,i,k,lab,v){const p=parse(v),d=`data-t="${t}" data-i="${i}" data-k="${k}"`;
+ return`<label class="color-field">${lab}<div class="col"><input type="color" ${d} data-p="pick" value="#${p.rgb.toLowerCase()}" aria-label="${esc(lab)} picker"><input type="text" ${d} data-p="hex" value="${esc(v||'')}" spellcheck="false" aria-label="${esc(lab)} ARGB value"><div class="alpha-row"><input type="range" ${d} data-p="alpha" min="0" max="255" step="1" value="${p.a}" aria-label="${esc(lab)} opacity"><span class="pct" aria-live="off">${Math.round(p.a/2.55)}%</span></div></div></label>`}
+function gopts(cur){return S.groups.map(g=>`<option value="${esc(g.id)}"${g.id===cur?' selected':''}>${esc(g.name||g.id)}</option>`).join('')+(cur&&!S.groups.some(g=>g.id===cur)?`<option selected>${esc(cur)}</option>`:'')}
+const STY=['filled','bordered','filled and bordered'];
+const PN={glass:'Liquid Glass — clear',tint:'Liquid Glass — accent tint',smoked:'Liquid Glass — smoked',outline:'Outline only',solid:'Solid dark',light:'Solid light (for dark glyphs)'};
+const PO=Object.keys(PN).map(k=>`<option value="${k}">${PN[k]}</option>`).join('');
+const PRE={
+ glass:()=>({tagColor:'#33FFFFFF',borderColor:'#80FFFFFF',tagStyle:'filled'}),
+ tint:()=>{const c='7E8AFF';return{tagColor:mk(c,0x40),borderColor:mk(c,0x99),tagStyle:'filled'}},
+ smoked:()=>({tagColor:'#66101018',borderColor:'#33FFFFFF',tagStyle:'filled'}),
+ outline:()=>({tagColor:'#00000000',borderColor:'#FFFFFFFF',tagStyle:'bordered'}),
+ solid:()=>({tagColor:'#FF1A1A1A',borderColor:'#FF858283',tagStyle:'filled'}),
+ light:()=>({tagColor:'#FFFFFFFF',borderColor:'#FFFFFFFF',tagStyle:'filled'})};
+
+function fillSel(){const gf=$('#gf'),sc=$('#scope'),a=gf.value,b=sc.value;
+ gf.innerHTML='<option value="">All groups</option>'+gopts('');
+ sc.innerHTML='<option value="">Apply to: all badges</option>'+S.groups.map(g=>`<option value="${esc(g.id)}">Apply to: ${esc(g.name||g.id)}</option>`).join('');
+ gf.value=a;sc.value=b;if(gf.value!==a)gf.value='';if(sc.value!==b)sc.value='';
+ document.querySelectorAll('select[data-k=groupId]').forEach(s=>{const f=S.filters[s.dataset.i];if(f)s.innerHTML=gopts(f.groupId)});
+ document.querySelectorAll('.gn').forEach(e=>{const f=S.filters[e.dataset.i];if(f)e.textContent=gname(f.groupId)})}
+
+function render(nc){
+ $('#cnt').textContent=S.filters.length+' badges · '+S.groups.length+' groups';$('#fn').textContent=fname;
+ fillSel();
+ $('#group-meta').textContent=S.groups.length+' groups';
+ $('#groups').innerHTML=S.groups.map((g,i)=>`<div class="grow" data-group-index="${i}"><label class="group-id-field"><span>Group ID</span><input data-t="g" data-i="${i}" data-k="id" value="${esc(g.id)}" spellcheck="false" autocomplete="off"></label><label class="group-name-field"><span>Name</span><input data-t="g" data-i="${i}" data-k="name" value="${esc(g.name)}"></label><div class="group-actions"><button type="button" class="ib group-move" data-a="gup" data-i="${i}" title="Move group up" aria-label="Move ${esc(g.name||g.id)} up" ${i===0?'disabled':''}>↑</button><button type="button" class="ib group-move" data-a="gdown" data-i="${i}" title="Move group down" aria-label="Move ${esc(g.name||g.id)} down" ${i===S.groups.length-1?'disabled':''}>↓</button><button type="button" class="sm group-bulk" data-a="gbulk" data-i="${i}" title="Bulk edit badges in this group">Bulk edit</button><button type="button" class="sm group-delete" data-a="gdel" data-i="${i}" title="Delete group">Remove</button></div></div>`).join('');
+ const gf=$('#gf').value,L=$('#list'),q=$('#q').value.toLowerCase();L.innerHTML='';
+ if(!S.filters.length)L.innerHTML='<div class="empty">Drop a Nuvio / Fusion badge <b>.json</b> here, or use <b>Open</b> / <b>Link</b>.<br>Or press <b>New</b> to start from scratch.</div>';
+ S.filters.forEach((f,i)=>{if(gf&&f.groupId!==gf)return;if(q&&!(f.name+' '+f.id+' '+f.pattern).toLowerCase().includes(q))return;
+  const d=document.createElement('details');d.className='card';d.dataset.i=i;d.open=OP.has(f);
+  const di=`data-t="f" data-i="${i}"`,sty=STY.includes(f.tagStyle)?STY:[...STY,f.tagStyle];
+  d.innerHTML=`<summary><span class="pv pvw"></span><b class="nm">${esc(f.name)}</b><span class="gn" data-i="${i}">${esc(gname(f.groupId))}</span>
+  <label class="sw"><input type="checkbox" ${di} data-k="isEnabled" ${f.isEnabled!==false?'checked':''}> on</label>
+  <span class="card-actions"><button class="ib" data-a="up" data-i="${i}" title="Move up (higher priority)">${ic('up')}</button><button class="ib" data-a="down" data-i="${i}" title="Move down (lower priority)">${ic('dn')}</button><button class="ib" data-a="dup" data-i="${i}" title="Duplicate">${ic('copy')}</button><button class="ib" data-a="del" data-i="${i}" title="Delete">${ic('trash')}</button></span></summary>
+  <div class="fields">
+  <label class="field-name">Name<input ${di} data-k="name" value="${esc(f.name)}"></label>
+  <label class="field-id">ID<input ${di} data-k="id" value="${esc(f.id)}"></label>
+  <label class="field-group">Group<select ${di} data-k="groupId">${gopts(f.groupId)}</select></label>
+  <label class="field-style">Tag style<select ${di} data-k="tagStyle">${sty.map(s=>`<option${s===f.tagStyle?' selected':''}>${esc(s)}</option>`).join('')}</select></label>
+  <label class="wide field-image">Image URL<input ${di} data-k="imageURL" value="${esc(f.imageURL)}" spellcheck="false" placeholder="https://…/badge.svg or .png — or use Upload SVG"></label>
+  <div class="wide imgrow"></div>
+  <label class="wide field-pattern">Pattern<textarea rows="2" ${di} data-k="pattern" spellcheck="false">${esc(f.pattern)}</textarea></label>
+  ${colF('f',i,'tagColor','Fill',f.tagColor)}${colF('f',i,'borderColor','Border',f.borderColor)}${colF('f',i,'textColor','SVG artwork',f.textColor)}
+  <label class="field-preset">Preset<select data-pre="${i}"><option value="">Choose…</option>${PO}</select></label>
+  </div>`;
+  d.querySelector('.pvw').append(chip(f));imgRow(d,f);L.append(d)});
+ stage();chkUI();ub();updateGlobalSvgUI();if(nc!==true)commit()}
+
+function lite(el,o,t){lite0(el,o,t);clearTimeout(HT);HT=setTimeout(commit,500);chkUI()}
+function lite0(el,o,t){
+ if(t==='g'){stage();if(el.dataset.k==='name'||el.dataset.k==='id')fillSel();return}
+ const c=el.closest('.card');c.querySelector('.pvw').replaceChildren(chip(o));
+ if(el.dataset.k==='imageURL'){clearTimeout(c._t);c._t=setTimeout(()=>imgRow(c,o),300)}
+ c.querySelector('.nm').textContent=o.name||'';
+ if(el.dataset.k==='groupId')c.querySelector('.gn').textContent=gname(o.groupId);
+ stage();updateGlobalSvgUI()}
+
+$('#list').addEventListener('input',e=>lh(e));
+$('#groups').addEventListener('input',e=>lh(e));
+$('#groups').addEventListener('change',e=>{const el=e.target;if(el.dataset.t!=='g'||el.dataset.k!=='id')return;const g=S.groups[+el.dataset.i];if(!g)return;if(el.value.trim()!==String(g.id)){el.value=g.id;el.style.borderColor='';toast('Group ID must be non-empty and unique')}});
+function lh(e){const el=e.target,k=el.dataset.k;if(!k)return;const t=el.dataset.t,o=(t==='f'?S.filters:S.groups)[el.dataset.i];if(!o)return;
+ if(el.dataset.p){const col=el.closest('.col'),pk=col.querySelector('input[type=color]'),hx=col.querySelector('input[type=text]'),alpha=col.querySelector('input[type=range]'),pct=col.querySelector('.pct');let v;
+  if(el.dataset.p==='hex'){const q=parse(el.value);if(q.bad){el.style.borderColor='#F16A6A';return}el.style.borderColor='';v=mk(q.rgb,q.a);pk.value='#'+q.rgb.toLowerCase();if(alpha)alpha.value=q.a;if(pct)pct.textContent=Math.round(q.a/2.55)+'%'}
+  else if(el.dataset.p==='alpha'){const old=parse(hx.value);if(old.bad)return;v=mk(old.rgb,el.value);hx.value=v;hx.style.borderColor='';if(pct)pct.textContent=Math.round(Number(el.value)/2.55)+'%'}
+  else{const old=parse(hx.value);v=mk(pk.value.slice(1).toUpperCase(),old.bad?255:old.a);hx.value=v;hx.style.borderColor='';if(alpha)alpha.value=parse(v).a;if(pct)pct.textContent=Math.round(parse(v).a/2.55)+'%'}
+  o[k]=v}
+ else if(t==='g'&&k==='id'){
+  const next=String(el.value||'').trim(),idx=+el.dataset.i,old=String(o.id||'');
+  const duplicate=!next||S.groups.some((g,j)=>j!==idx&&String(g.id)===next);
+  if(duplicate){el.style.borderColor='#F16A6A';return}
+  el.style.borderColor='';
+  if(next!==old){o.id=next;S.filters.forEach(f=>{if(String(f.groupId||'')===old)f.groupId=next});el.value=next}
+ }else o[k]=el.type==='checkbox'?el.checked:el.value;
+ if(k==='pattern'){try{rx(el.value);el.style.borderColor=''}catch(_){el.style.borderColor='#F16A6A'}}
+ lite(el,o,t);if(t==='f'&&k==='textColor')scheduleTextColor(o)}
+
+$('#list').addEventListener('toggle',e=>{const d=e.target;if(d.className==='card'){const f=S.filters[d.dataset.i];if(f)d.open?OP.add(f):OP.delete(f)}},true);
+$('#list').addEventListener('change',e=>{const s=e.target;if(s.dataset.pre===undefined||!s.value)return;
+ const f=S.filters[s.dataset.pre];ap(f,s.value);OP.add(f);render();toast('Preset applied')});
+$('#list').addEventListener('focusout',e=>{const el=e.target;if(el.dataset.k==='imageURL'&&el.dataset.t==='f'){const f=S.filters[+el.dataset.i];if(f&&isSvgUrl(f.imageURL))embedOneFilter(f)}});
+
+function nb(i,d){const gf=$('#gf').value;for(let j=i+d;j>=0&&j<S.filters.length;j+=d)if(!gf||S.filters[j].groupId===gf)return j;return -1}
+const uid=b=>{const ids=new Set(S.filters.map(f=>f.id));let x=b,k=2;while(ids.has(x))x=b+'-'+k++;return x};
+$('#list').addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b)return;e.preventDefault();
+ const i=+b.dataset.i,a=b.dataset.a,F=S.filters;
+ if(a==='del'){if(!confirm('Delete "'+F[i].name+'"?'))return;F.splice(i,1)}
+ else if(a==='dup'){const c=JSON.parse(JSON.stringify(F[i]));c.id=uid(c.id+'-copy');c.name+=' copy';F.splice(i+1,0,c);OP.add(c)}
+ else{const j=nb(i,a==='up'?-1:1);if(j<0)return;[F[i],F[j]]=[F[j],F[i]]}
+ render()});
+$('#groups').addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b)return;
+ const i=+b.dataset.i,a=b.dataset.a,g=S.groups[i];if(!g)return;
+ if(a==='gup'||a==='gdown'){const j=i+(a==='gup'?-1:1);if(j<0||j>=S.groups.length)return;[S.groups[i],S.groups[j]]=[S.groups[j],S.groups[i]];render();return}
+ if(a==='gdel'){if(S.filters.some(f=>f.groupId===g.id))return alert('"'+g.name+'" still has badges. Move or delete them first.');
+  if(confirm('Delete group "'+g.name+'"?')){S.groups.splice(i,1);render()}}});
+$('#gadd').onclick=()=>{const n=prompt('Group name?');if(!n||!n.trim())return;const base='g-'+n.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');const ids=new Set(S.groups.map(g=>g.id));let id=base||'group',k=2;while(ids.has(id))id=base+'-'+k++;
+ S.groups.push({id,name:n.trim(),isExpanded:true});S.hg=true;render()};
+$('#add').onclick=()=>{if(!S.groups.length&&!S.filters.length)S.groups.push({id:'g1',name:'Group 1',isExpanded:true});
+ const gid=$('#gf').value||(S.groups[0]||{}).id||'',f={id:uid('new-badge'),groupId:gid,name:'New badge',pattern:'(?i)\\bnew\\b',imageURL:'',isEnabled:true,tagColor:PRE.glass().tagColor,tagStyle:PRE.glass().tagStyle,textColor:'#FFFFFFFF',borderColor:PRE.glass().borderColor};
+ S.filters.push(f);OP.add(f);render();const c=$('#list').lastElementChild;if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'center'})};
+$('#new').onclick=()=>{if(S.filters.length&&!confirm('Discard the current set?'))return;
+ S={filters:[],groups:[{id:'g1',name:'Group 1',isExpanded:true}],extra:{},hg:true};fname='nuvio-badges.json';resetHistory();render()};
+
+$('#apply').onclick=()=>{const sc=$('#scope').value,p=$('#pre').value;if(!PRE[p]){toast('Choose a style preset first');return}
+ const t=S.filters.filter(f=>!sc||f.groupId===sc);t.forEach(f=>ap(f,p));render();toast(PN[p]+' applied to '+t.length+' badges')};
+
+async function load(txt,name){
+ let d;try{d=JSON.parse(txt)}catch(e){return alert('Not valid JSON: '+e.message)}
+ if(!d||typeof d!=='object'||!Array.isArray(d.filters))return alert('No "filters" array found. Is this a Nuvio/Fusion badge file?');
+ if(d.filters.some(f=>!f||typeof f!=='object'||Array.isArray(f)))return alert('This file contains a badge entry that is not a JSON object. No changes were loaded.');
+ const filters=d.filters.map(f=>({...f})),groups=Array.isArray(d.groups)?d.groups.filter(g=>g&&typeof g==='object'&&!Array.isArray(g)).map(groupRecord):[];
+ const{filters:_filters,groups:_groups,...extra}=d;
+ const fixColor=v=>typeof v==='string'?v.replace(/^#{2,}/,'#'):v;
+ filters.forEach(f=>['tagColor','borderColor','textColor'].forEach(k=>{if(f[k]!=null)f[k]=fixColor(f[k])}));
+ const seq=++LOAD_SEQ;
+ S={filters,groups,extra,hg:Array.isArray(d.groups)};fname=name||fname;
+ $('#gf').value='';resetHistory();render();
+ IMPORT_EMBEDDING=true;$('#dl').disabled=true;$('#cp').disabled=true;updateGlobalSvgUI();
+ const setup=$('#setup');if(setup)setup.textContent='Checking SVG artwork and embedding hosted SVGs…';
+ try{
+  const stats=await processImportedSvgs(filters,seq);
+  if(seq!==LOAD_SEQ)return;
+  render();commit();syncGlobalSvgColorFromFilters();
+  const parts=[];if(stats.embedded)parts.push(stats.embedded+' SVG'+(stats.embedded===1?'':'s')+' embedded');
+  if(stats.recolored)parts.push(stats.recolored+' artwork recolored');
+  if(stats.failed)parts.push(stats.failed+' SVG'+(stats.failed===1?'':'s')+' kept as original URL/data');
+  toast('Loaded '+filters.length+' badges'+(groups.length?' · '+groups.length+' groups':'')+(parts.length?' · '+parts.join(' · '):''));
+  if(stats.failed&&setup)setup.textContent=`${stats.failed} SVG image(s) could not be embedded. Their original imageURL values were kept; check each badge's image status.`;
+ }catch(e){if(seq===LOAD_SEQ)toast('Loaded JSON, but SVG processing stopped: '+e.message)}
+ finally{if(seq===LOAD_SEQ){IMPORT_EMBEDDING=false;$('#dl').disabled=false;$('#cp').disabled=false;setupNote();updateGlobalSvgUI()}}
+}
+// Multi-pack importer and merger. Files and public JSON URLs can be mixed.
+// Existing filters stay first to preserve priority.
+let MERGE_PACKS=[],MERGE_ROWS=[],MERGE_SOURCE_KEYS=new Set();
+function openMerge(){MERGE_PACKS=[];MERGE_ROWS=[];MERGE_SOURCE_KEYS=new Set();$('#merge-files').value='';$('#merge-url').value='';$('#merge-mode').value='merge';renderMergeRows();$('#merge-status').textContent='Existing filters keep their current priority.';$('#merge-apply').disabled=true;$('#merge-modal').classList.add('show');$('#merge-modal').setAttribute('aria-hidden','false')}
+$('#merge-open').onclick=openMerge;
+function parseMergePack(text,name,source){
+ const d=JSON.parse(text);
+ if(!d||typeof d!=='object'||Array.isArray(d)||!Array.isArray(d.filters))throw Error('No filters array. Expected a Nuvio / Fusion JSON object with a filters array.');
+ if(d.filters.some(f=>!f||typeof f!=='object'||Array.isArray(f)))throw Error('A filter entry is not a JSON object.');
+ const{filters,groups,...extra}=d,rawGroups=Array.isArray(groups)?groups.filter(g=>g&&typeof g==='object'&&!Array.isArray(g)):[],seenGroupNames=new Map(),cleanGroups=[];
+ for(const raw of rawGroups){const g=groupRecord(raw),id=g.id.trim(),groupName=(g.name||id).trim().toLowerCase();if(id&&seenGroupNames.has(id)){if(seenGroupNames.get(id)!==groupName)throw Error('Conflicting duplicate group ID "'+id+'" in this pack.');continue}if(id)seenGroupNames.set(id,groupName);cleanGroups.push(g)}
+ return{name,source,filters:filters.map(f=>({...f})),groups:cleanGroups,extra};
+}
+function updateMergeState(){MERGE_PACKS=MERGE_ROWS.filter(r=>r.pack).map(r=>r.pack);const valid=MERGE_PACKS.length,failed=MERGE_ROWS.length-valid;$('#merge-apply').disabled=!valid;$('#merge-status').textContent=valid?`${valid} valid pack${valid===1?'':'s'} ready${failed?` · ${failed} failed`:''}.`:(failed?`${failed} source${failed===1?'':'s'} failed. Add a valid JSON pack.`:'Add JSON files or public links to begin.')}
+function renderMergeRows(){const list=$('#merge-file-list');list.innerHTML='';if(!MERGE_ROWS.length){list.innerHTML='<div class="merge-empty">No packs selected yet.</div>';updateMergeState();return}MERGE_ROWS.forEach((r,i)=>{const row=document.createElement('div');row.className='merge-file-row';const left=document.createElement('div'),name=document.createElement('b'),meta=document.createElement('small'),remove=document.createElement('button');name.textContent=r.name;meta.textContent=r.meta;if(!r.pack)meta.className='merge-bad';left.append(name,meta);remove.type='button';remove.className='sm';remove.textContent='Remove';remove.setAttribute('aria-label','Remove '+r.name);remove.dataset.mergeRemove=String(i);row.append(left,remove);list.append(row)});updateMergeState()}
+function addMergeRow(row){MERGE_ROWS.push(row);renderMergeRows()}
+$('#merge-file-list').addEventListener('click',e=>{const b=e.target.closest('button[data-merge-remove]');if(!b)return;const i=Number(b.dataset.mergeRemove),row=MERGE_ROWS[i];if(row?.sourceKey)MERGE_SOURCE_KEYS.delete(row.sourceKey);MERGE_ROWS.splice(i,1);renderMergeRows()});
+$('#merge-files').addEventListener('change',async e=>{
+ const files=[...e.target.files||[]];e.target.value='';
+ for(const file of files){const key=`file:${file.name}:${file.size}:${file.lastModified}`;if(MERGE_SOURCE_KEYS.has(key))continue;MERGE_SOURCE_KEYS.add(key);try{const pack=parseMergePack(await file.text(),file.name,'file');addMergeRow({name:file.name,meta:`${pack.filters.length} filters · ${pack.groups.length} groups · File`,pack,sourceKey:key})}catch(err){addMergeRow({name:file.name,meta:err.message,pack:null,sourceKey:key})}}
+});
+function normalizePackUrl(value){
+ let u;try{u=new URL(String(value||'').trim())}catch(_){throw Error('Enter a complete URL beginning with https:// or http://.')}
+ if(!['http:','https:'].includes(u.protocol))throw Error('Only HTTP and HTTPS links are supported.');
+ if(u.username||u.password)throw Error('Links containing embedded credentials are not supported.');
+ // Convert common GitHub repository blob links to their raw-file equivalent.
+ if(u.hostname.toLowerCase()==='github.com'){
+  const parts=u.pathname.split('/').filter(Boolean),blob=parts.indexOf('blob');
+  if(blob===2&&parts.length>4){u.hostname='raw.githubusercontent.com';u.pathname='/'+parts.slice(0,2).concat(parts.slice(3)).join('/')}
+ }
+ u.hash='';return u.href;
+}
+async function fetchMergePack(rawUrl){
+ let url;try{url=normalizePackUrl(rawUrl)}catch(err){addMergeRow({name:rawUrl,meta:err.message,pack:null,sourceKey:null});return}
+ if(MERGE_SOURCE_KEYS.has('url:'+url)){addMergeRow({name:rawUrl,meta:'This URL has already been added.',pack:null,sourceKey:null});return}
+ const key='url:'+url;MERGE_SOURCE_KEYS.add(key);const button=$('#merge-add-url');button.disabled=true;button.textContent='Fetching…';$('#merge-status').textContent='Fetching JSON from link…';
+ try{
+  if(!window.fetch)throw Error('This browser does not support URL importing.');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+  let response,text;try{response=await fetch(url,{mode:'cors',credentials:'omit',redirect:'follow',signal:controller.signal,cache:'no-store'});if(!response.ok)throw Error('The server returned HTTP '+response.status+'.');const length=Number(response.headers.get('content-length')||0);if(length>10*1024*1024)throw Error('The JSON file is larger than the 10 MB import limit.');text=await response.text();if(text.length>10*1024*1024)throw Error('The JSON file is larger than the 10 MB import limit.')}finally{clearTimeout(timer)}
+  const path=new URL(url).pathname,name=decodeURIComponent(path.split('/').filter(Boolean).pop()||'remote-badges.json');
+  const pack=parseMergePack(text,name,url);addMergeRow({name,meta:`${pack.filters.length} filters · ${pack.groups.length} groups · Link`,pack,sourceKey:key});$('#merge-url').value='';
+ }catch(err){MERGE_SOURCE_KEYS.delete(key);let message=err.name==='AbortError'?'Request timed out after 20 seconds.':err instanceof SyntaxError?'The link did not return valid JSON.':err.message||'Could not fetch this link.';if(err instanceof TypeError||/Failed to fetch|Load failed|NetworkError/i.test(message))message='Could not read this link. The host may block browser CORS requests; use a raw JSON URL from a CORS-enabled host.';addMergeRow({name:rawUrl,meta:message,pack:null,sourceKey:null})}
+ finally{button.disabled=false;button.textContent='Add link';updateMergeState()}
+}
+$('#merge-add-url').addEventListener('click',()=>{const url=$('#merge-url').value.trim();if(!url){$('#merge-url').focus();$('#merge-status').textContent='Paste a JSON link first.';return}fetchMergePack(url)});
+$('#merge-url').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#merge-add-url').click()}});
+function uniqueName(base,used,fallback){let root=String(base||'').trim()||fallback,candidate=root,n=2;while(used.has(candidate)){candidate=root+'-'+n++;}used.add(candidate);return candidate}
+function mergePackData(packs,replace){
+ const groups=replace?[]:S.groups.map(groupRecord),filters=replace?[]:S.filters.map(f=>({...f})),extra=replace?{}:{...(S.extra||{})};
+ for(const pack of packs){Object.keys(pack.extra||{}).forEach(k=>{if(k!=='groups'&&k!=='filters'&&!Object.prototype.hasOwnProperty.call(extra,k))extra[k]=pack.extra[k]})}
+ const usedGroups=new Set(groups.map(g=>String(g.id))),usedFilters=new Set(filters.map(f=>String(f.id))),added=[];let groupRenames=0,filterRenames=0,placeholders=0;
+ for(const pack of packs){const map=new Map();
+  for(const raw of pack.groups){const old=String(raw.id||'').trim();if(!old)continue;if(map.has(old))continue;const name=String(raw.name||old).trim()||old;
+   const exact=groups.find(g=>String(g.id)===old);
+   if(exact&&String(exact.name||exact.id).trim().toLowerCase()===name.toLowerCase()){map.set(old,exact.id);continue}
+   if(exact){const id=uniqueName(old,usedGroups,'imported-group');groups.push({id,name,isExpanded:raw.isExpanded!==false});map.set(old,id);groupRenames++;continue}
+   const id=uniqueName(old,usedGroups,'imported-group');groups.push({id,name,isExpanded:raw.isExpanded!==false});map.set(old,id);
+  }
+  for(const raw of pack.filters){const f={...raw};const oldGroup=String(f.groupId||'').trim();
+   if(oldGroup){if(!map.has(oldGroup)){const existing=groups.find(g=>String(g.id)===oldGroup);if(existing)map.set(oldGroup,oldGroup);else{const id=uniqueName(oldGroup,usedGroups,'imported-group');groups.push({id,name:oldGroup,isExpanded:true});map.set(oldGroup,id);placeholders++}}f.groupId=map.get(oldGroup)}
+   const oldId=String(f.id||'').trim();if(!oldId||usedFilters.has(oldId)){f.id=uniqueName(oldId||'imported-badge',usedFilters,'imported-badge');filterRenames++}else{f.id=oldId;usedFilters.add(oldId)}
+   const fixColor=v=>typeof v==='string'?v.replace(/^#{2,}/,'#'):v;['tagColor','borderColor','textColor'].forEach(k=>{if(f[k]!=null)f[k]=fixColor(f[k])});filters.push(f);added.push(f);
+  }
+ }
+ return{groups,filters,extra,added,groupRenames,filterRenames,placeholders};
+}
+$('#merge-apply').onclick=async()=>{
+ if(!MERGE_PACKS.length)return;const replace=$('#merge-mode').value==='replace';
+ if(replace&&S.filters.length&&!confirm('Replace the current configuration with the selected packs? This can be undone, but existing filters will be removed.'))return;
+ const result=mergePackData(MERGE_PACKS,replace);if(!result.filters.length){toast('The selected packs contain no filters');return}
+ S={filters:result.filters,groups:result.groups,extra:result.extra,hg:true};fname=replace?'merged-badges.json':(fname.replace(/\.json$/i,'')+'-merged.json');
+ const seq=++LOAD_SEQ;IMPORT_EMBEDDING=true;$('#dl').disabled=true;$('#cp').disabled=true;$('#global-svg-apply').disabled=true;closeModal('merge');render();
+ const statusParts=[];if(result.groupRenames)statusParts.push(result.groupRenames+' group ID conflict(s) renamed');if(result.filterRenames)statusParts.push(result.filterRenames+' filter ID(s) made unique');if(result.placeholders)statusParts.push(result.placeholders+' missing group placeholder(s) created');
+ toast('Merged '+MERGE_PACKS.length+' pack(s) · '+result.added.length+' filters'+(statusParts.length?' · '+statusParts.join(' · '):''));
+ try{const stats=await processImportedSvgs(result.added,seq);if(seq!==LOAD_SEQ)return;render();commit();if(stats.failed)toast('Merge complete · '+stats.failed+' SVG link(s) could not be embedded');else toast('Merge complete · '+result.added.length+' filters imported'+(stats.embedded?' · '+stats.embedded+' SVGs embedded':''))}
+ catch(err){if(seq===LOAD_SEQ)toast('Merge completed, but SVG processing stopped: '+err.message)}
+ finally{if(seq===LOAD_SEQ){IMPORT_EMBEDDING=false;$('#dl').disabled=false;$('#cp').disabled=false;updateGlobalSvgUI();setupNote()}}
+};
+$('#merge-modal').addEventListener('click',e=>{if(e.target.matches('[data-modal-close="merge"]')||e.target===$('#merge-modal'))closeModal('merge')});
+
+// Group-level bulk editing applies directly to the group's filters, never to the group JSON record.
+function openBulk(groupId){const sel=$('#bulk-group');sel.innerHTML=S.groups.map(g=>`<option value="${esc(g.id)}">${esc(g.name||g.id)} · ${S.filters.filter(f=>f.groupId===g.id).length}</option>`).join('');if(!S.groups.length){toast('Create a group first');return}sel.value=groupId||S.groups[0].id;$('#bulk-enabled').value='keep';$('#bulk-style').value='';$('#bulk-fill').value='';$('#bulk-border').value='';$('#bulk-svg').value='';$('#bulk-subtitle').textContent='Apply one or more changes to every badge in '+gname(sel.value)+'.';$('#bulk-modal').classList.add('show');$('#bulk-modal').setAttribute('aria-hidden','false')}
+$('#groups').addEventListener('click',e=>{const b=e.target.closest('button[data-a="gbulk"]');if(b){e.preventDefault();openBulk(S.groups[+b.dataset.i]?.id)}});
+$('#bulk-group').addEventListener('change',e=>$('#bulk-subtitle').textContent='Apply one or more changes to every badge in '+gname(e.target.value)+'.');
+$('#bulk-apply').onclick=async()=>{
+ const gid=$('#bulk-group').value,targets=S.filters.filter(f=>String(f.groupId||'')===gid);if(!targets.length){toast('This group has no badges');return}
+ const enabled=$('#bulk-enabled').value,style=$('#bulk-style').value,fill=$('#bulk-fill').value.trim(),border=$('#bulk-border').value.trim(),svg=$('#bulk-svg').value.trim();
+ if(fill&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(fill)){$('#bulk-fill').style.borderColor='#F16A6A';toast('Invalid fill color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-fill').style.borderColor='';
+ if(border&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(border)){$('#bulk-border').style.borderColor='#F16A6A';toast('Invalid border color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-border').style.borderColor='';
+ if(svg&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(svg)){$('#bulk-svg').style.borderColor='#F16A6A';toast('Invalid SVG color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-svg').style.borderColor='';
+ let changed=0;targets.forEach(f=>{let c=false;if(enabled==='enable'&&f.isEnabled===false){f.isEnabled=true;c=true}else if(enabled==='disable'&&f.isEnabled!==false){f.isEnabled=false;c=true}if(style&&f.tagStyle!==style){f.tagStyle=style;c=true}if(fill&&f.tagColor!==fill){f.tagColor=fill;c=true}if(border&&f.borderColor!==border){f.borderColor=border;c=true}if(c)changed++});
+ const svgTargets=svg?targets.filter(isSvgFilter):[];if(svg){targets.filter(isSvgFilter).forEach(f=>{if(f.textColor!==svg){f.textColor=svg;changed++}})}
+ if(!changed){toast('No changes to apply');return}
+ closeModal('bulk');render();
+ if(svgTargets.length){const seq=++LOAD_SEQ;IMPORT_EMBEDDING=true;$('#dl').disabled=true;$('#cp').disabled=true;try{const st=await processImportedSvgs(svgTargets,seq);if(seq===LOAD_SEQ){render();commit();toast('Bulk edit applied · '+svgTargets.length+' SVG artwork color(s) processed'+(st.failed?' · '+st.failed+' original URL(s) retained':''))}}finally{if(seq===LOAD_SEQ){IMPORT_EMBEDDING=false;$('#dl').disabled=false;$('#cp').disabled=false;updateGlobalSvgUI()}}}
+ else toast('Updated '+targets.length+' badge(s) in '+gname(gid));
+};
+$('#bulk-modal').addEventListener('click',e=>{if(e.target.matches('[data-modal-close="bulk"]')||e.target===$('#bulk-modal'))closeModal('bulk')});
+addEventListener('keydown',e=>{if(e.key==='Escape'){['health','merge','bulk','gist'].forEach(closeModal)}});
+document.querySelectorAll('[data-modal-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.modalClose)));
+
+$('#open').onclick=()=>$('#file').click();
+$('#file').onchange=async e=>{const f=e.target.files[0];if(f){try{await load(await f.text(),f.name)}catch(err){alert('Could not read JSON: '+err.message)}}e.target.value=''};
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',e=>{e.preventDefault();clearSvgDrop();{const files=[...e.dataTransfer.files],card=e.target.closest&&e.target.closest('.card'),svg=files.find(isSvgFile);if(card&&svg&&!files.some(x=>/\.json$/i.test(x.name)||x.type==='application/json')){uploadSvgToFilter(S.filters[+card.dataset.i],svg);return}}const f=[...e.dataTransfer.files].find(x=>/\.json$/i.test(x.name)||x.type==='application/json');if(!f){toast('Drop a Nuvio/Fusion JSON file to open it');return}f.text().then(t=>load(t,f.name)).catch(err=>alert('Could not read JSON: '+err.message))});
+
+function out(){const clean=v=>typeof v==='string'?v.trim().replace(/^#+/,'#'):v;
+ const groups=S.groups.map(groupRecord);
+ const filterKeys=['id','groupId','name','pattern','imageURL','isEnabled','tagColor','tagStyle','textColor','borderColor'];
+ const filters=S.filters.map(f=>{const x={};filterKeys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(f,k))x[k]=clean(f[k])});Object.keys(f).forEach(k=>{if(!filterKeys.includes(k)&&k!=='type')x[k]=f[k]});return x});
+ const o={groups,filters};Object.keys(S.extra||{}).forEach(k=>{if(k!=='groups'&&k!=='filters')o[k]=S.extra[k]});return JSON.stringify(o,null,2)}
+function scanHealth(){
+ const issues=[],filterIds=new Map(),groupIds=new Map(),validGroups=new Set(S.groups.map(g=>String(g.id||'').trim()).filter(Boolean));
+ const add=(severity,title,detail)=>issues.push({severity,title,detail});
+ S.groups.forEach((g,i)=>{const id=String(g.id||'').trim(),label=String(g.name||id||`Group ${i+1}`);
+  if(!String(g.name||'').trim())add('warning','Group name is empty',`${label} has no display name.`);
+  if(!id)add('error','Group ID is empty',`${label} needs a non-empty ID.`);
+  else if(groupIds.has(id))add('error','Duplicate group ID',`${label} duplicates group "${groupIds.get(id)}". Group IDs must be unique.`);
+  else groupIds.set(id,label);
+ });
+ const patternSeen=new Map();
+ S.filters.forEach((f,i)=>{
+  const label=String(f.name||f.id||`Filter ${i+1}`),id=String(f.id||'').trim(),gid=String(f.groupId||'').trim(),pattern=String(f.pattern||'');
+  if(!String(f.name||'').trim())add('warning','Filter name is empty',`${label} has no display name.`);
+  if(!id)add('error','Filter ID is empty',`${label} needs a non-empty ID.`);
+  else if(filterIds.has(id))add('error','Duplicate filter ID',`${label} shares ID "${id}" with ${filterIds.get(id)}.`);
+  else filterIds.set(id,label);
+  if(!gid)add('warning','No group assigned',`${label} has an empty groupId and will be treated as ungrouped in the editor.`);
+  else if(!validGroups.has(gid))add('error','Missing group reference',`${label} points to groupId "${gid}", but no group with that ID exists.`);
+  if(!pattern.trim())add('error','Pattern is empty',`${label} has no regex pattern.`);
+  else{
+   try{
+    const re=rx(pattern),key=(gid||'__ungrouped__')+'|'+re.source+'/'+re.flags;
+    if(patternSeen.has(key))add('warning','Duplicate match rule',`${label} has the same regex and group as ${patternSeen.get(key)}. The earlier filter wins.`);
+    else patternSeen.set(key,label);
+   }catch(e){add('error','Invalid regular expression',`${label}: ${e.message}`)}
+  }
+  for(const k of ['tagColor','borderColor','textColor']){const v=f[k];if(v!=null&&String(v).trim()&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(v).trim()))add('error','Invalid color value',`${label} · ${k} must use #RRGGBB or #AARRGGBB.`)}
+  const url=String(f.imageURL||'').trim();
+  if(f.isEnabled!==false&&!url)add('warning','Enabled badge has no image',`${label} has no imageURL, so the artwork may not render.`);
+  else if(url){
+   const data=/^data:image\/(?:svg\+xml|png|jpeg|webp|gif)(?:;[^,]*)?,/i.test(url);
+   let web=false;try{const u=new URL(url,location.href);web=['http:','https:'].includes(u.protocol)}catch(_){}
+   if(!data&&!web)add('error','Unsupported image URL',`${label} uses an unsupported or unsafe imageURL scheme.`);
+   else if(/^http:\/\//i.test(url))add('warning','Insecure image URL',`${label} uses HTTP. HTTPS is preferable where available.`);
+  }
+  if(f.tagStyle&&!STY.includes(f.tagStyle))add('warning','Unrecognized tag style',`${label} uses "${f.tagStyle}". Confirm the target app supports this value.`);
+  const svgError=SVG_ERRORS.get(f);if(svgError)add('warning','SVG image needs attention',`${label}: ${svgError}`);
+ });
+ const groupUse=new Set(S.filters.map(f=>String(f.groupId||'').trim()).filter(Boolean));
+ S.groups.forEach(g=>{if(g.id&&!groupUse.has(String(g.id)))add('info','Empty group',`Group "${g.name||g.id}" has no assigned filters.`)});
+ const errors=issues.filter(x=>x.severity==='error').length,warnings=issues.filter(x=>x.severity==='warning').length,infos=issues.filter(x=>x.severity==='info').length;
+ return{issues,errors,warnings,infos,total:issues.length};
+}
+let HEALTH_ACTION='none',LAST_HEALTH=null;
+function openHealth(action='none'){
+ HEALTH_ACTION=action;LAST_HEALTH=scanHealth();
+ const r=LAST_HEALTH,modal=$('#health-modal'),stats=$('#health-stats'),list=$('#health-list');
+ $('#health-summary').textContent=r.errors?`${r.errors} error${r.errors===1?'':'s'} · ${r.warnings} warning${r.warnings===1?'':'s'} · ${r.infos} info`:r.warnings?`No blocking errors · ${r.warnings} warning${r.warnings===1?'':'s'}`:'No errors or warnings found.';
+ stats.innerHTML=`<div class="health-stat ${r.errors?'err':'ok'}"><b>${r.errors}</b><span>Errors</span></div><div class="health-stat ${r.warnings?'warn':'ok'}"><b>${r.warnings}</b><span>Warnings</span></div><div class="health-stat"><b>${S.filters.length}</b><span>Filters checked</span></div>`;
+ list.innerHTML='';
+ if(!r.issues.length){const d=document.createElement('div');d.className='health-empty';d.textContent='All checks passed. Your configuration is ready.';list.append(d)}
+ else r.issues.forEach(issue=>{const row=document.createElement('div');row.className='health-item';const sev=document.createElement('span');sev.className='health-severity '+issue.severity;sev.textContent=issue.severity;const body=document.createElement('div'),title=document.createElement('b'),detail=document.createElement('p');title.textContent=issue.title;detail.textContent=issue.detail;body.append(title,detail);row.append(sev,body);list.append(row)});
+ const cont=$('#health-continue');cont.hidden=action==='none'||action==='gist'||r.errors>0;cont.disabled=!!r.errors;cont.textContent=action==='copy'?(r.warnings?'Copy with warnings':'Copy JSON'):(r.warnings?'Export with warnings':'Export JSON');
+ const gb=$('#health-gist');gb.hidden=action==='none'||action==='copy'||r.errors>0;gb.textContent=r.warnings?'Publish to Gist with warnings':'Publish to Gist';
+ $('#health-footnote').textContent=r.errors?'Fix all errors before exporting. Warnings are shown for review.':'Review warnings before continuing. The JSON is not modified by this check.';
+ modal.classList.add('show');modal.setAttribute('aria-hidden','false');
+}
+function closeModal(name){const m=$('#'+name+'-modal');if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true')}}
+function downloadJson(){const base=fname.replace(/\.json$/i,'').replace(/-edited$/,'');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out()],{type:'application/json'}));a.download=base+'-edited.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);toast('Downloaded '+a.download)}
+async function copyJson(){const t=out();try{await navigator.clipboard.writeText(t)}catch(_){const x=document.createElement('textarea');x.value=t;document.body.append(x);x.select();document.execCommand('copy');x.remove()}toast('JSON copied')}
+$('#health-open').onclick=()=>openHealth('none');
+$('#health-continue').onclick=()=>{if(!LAST_HEALTH||LAST_HEALTH.errors){toast('Fix health-check errors before exporting');return}const action=HEALTH_ACTION;closeModal('health');if(action==='copy')copyJson();else if(action==='download')downloadJson()};
+$('#health-modal').addEventListener('click',e=>{if(e.target.matches('[data-modal-close="health"]')||e.target===$('#health-modal'))closeModal('health')});
+$('#dl').onclick=()=>{if(!S.filters.length){toast('There are no badges to export');return}if(IMPORT_EMBEDDING){toast('Wait until SVG embedding finishes before exporting');return}openHealth('download')};
+$('#cp').onclick=()=>{if(!S.filters.length){toast('There are no badges to copy');return}if(IMPORT_EMBEDDING){toast('Wait until SVG embedding finishes before copying');return}openHealth('copy')};
+
+/* ---- Publish to a public GitHub Gist ---- */
+const GIST_TOKEN_KEY='nbl-gist-token';
+let GIST_TOKEN='',GIST_BUSY=false;
+function setGistStatus(text,kind){const e=$('#gist-status');e.textContent=text;e.className='hint'+(kind?' '+kind:'')}
+function gistFileName(){let n=($('#gist-name').value||'').trim().replace(/[\\/]/g,'-');if(!n)n='nuvio-badges.json';if(!/\.json$/i.test(n))n+='.json';return n}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(_){try{const x=document.createElement('textarea');x.value=t;x.setAttribute('readonly','');x.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.append(x);x.select();const ok=document.execCommand('copy');x.remove();return!!ok}catch(__){return false}}}
+function gistErrorMessage(res,data){const m=data&&data.message?String(data.message):'';
+ if(res.status===401)return'GitHub rejected the token (401). Check that it is correct and has not expired.';
+ if(res.status===403)return'GitHub refused the request (403)'+(m?': '+m:'')+'. The token may lack the Gists write permission, or a rate limit was hit.';
+ if(res.status===404)return'GitHub returned 404. This usually means the token does not have Gists write permission.';
+ if(res.status===422)return'GitHub rejected the content (422)'+(m?': '+m:'')+'. It may be too large, or flagged by spam protection.';
+ return'GitHub returned HTTP '+res.status+(m?': '+m:'')+'.'}
+function openGist(){
+ let saved='';try{saved=localStorage.getItem(GIST_TOKEN_KEY)||''}catch(_){}
+ $('#gist-token').value=GIST_TOKEN||saved;$('#gist-remember').checked=!!saved;
+ $('#gist-name').value=fname.replace(/\.json$/i,'').replace(/-edited$/,'')+'.json';
+ $('#gist-result').hidden=true;
+ const b=$('#gist-publish');b.disabled=false;b.textContent='Publish public gist';
+ setGistStatus('Ready to publish.');
+ const m=$('#gist-modal');m.classList.add('show');m.setAttribute('aria-hidden','false');
+ setTimeout(()=>{(!$('#gist-token').value?$('#gist-token'):b).focus()},30)}
+$('#gist-open').onclick=()=>{if(!S.filters.length){toast('There are no badges to publish');return}if(IMPORT_EMBEDDING){toast('Wait until SVG embedding finishes before publishing');return}openHealth('gist')};
+$('#health-gist').onclick=()=>{if(!LAST_HEALTH||LAST_HEALTH.errors){toast('Fix health-check errors before publishing');return}closeModal('health');openGist()};
+$('#gist-modal').addEventListener('click',e=>{if(e.target===$('#gist-modal'))closeModal('gist')});
+$('#gist-forget').onclick=()=>{GIST_TOKEN='';try{localStorage.removeItem(GIST_TOKEN_KEY)}catch(_){}$('#gist-token').value='';$('#gist-remember').checked=false;setGistStatus('Token forgotten.')};
+$('#gist-modal').addEventListener('click',async e=>{
+ const c=e.target.closest('[data-gist-copy]'),o=e.target.closest('[data-gist-open]');
+ if(c){const v=$('#'+c.dataset.gistCopy).value;if(v)setGistStatus(await copyText(v)?'Copied to clipboard.':'Could not access the clipboard. Select the URL and copy it manually.')}
+ if(o){const v=$('#'+o.dataset.gistOpen).value;if(v)window.open(v,'_blank','noopener,noreferrer')}});
+$('#gist-publish').addEventListener('click',async()=>{
+ if(GIST_BUSY)return;
+ const token=$('#gist-token').value.trim(),btn=$('#gist-publish');
+ if(!token){setGistStatus('Enter a GitHub token first.','err');$('#gist-token').focus();return}
+ if(!/^[\x21-\x7E]+$/.test(token)){setGistStatus('The token contains characters that are not allowed. Paste it again.','err');return}
+ if(!S.filters.length){setGistStatus('There are no badges to publish.','err');return}
+ if(IMPORT_EMBEDDING){setGistStatus('Wait until SVG embedding finishes.','err');return}
+ /* Open the tab NOW, inside the click, so popup blockers allow it; it is pointed at the raw URL after the upload. */
+ let tab=null;try{tab=window.open('about:blank','_blank')}catch(_){}
+ GIST_BUSY=true;btn.disabled=true;btn.textContent='Publishing…';$('#gist-result').hidden=true;
+ try{
+  const name=gistFileName(),content=out(),kb=Math.max(1,Math.round(new TextEncoder().encode(content).length/1024));
+  setGistStatus('Uploading '+kb+' KB to GitHub…');
+  const res=await fetch('https://api.github.com/gists',{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',
+   headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+token,'Content-Type':'application/json'},
+   body:JSON.stringify({description:($('#gist-desc').value||'').trim()||'Nuvio badge configuration',public:true,files:{[name]:{content}}})});
+  let data=null;try{data=await res.json()}catch(_){}
+  if(!res.ok)throw Error(gistErrorMessage(res,data));
+  const file=data&&data.files&&(data.files[name]||Object.values(data.files)[0]);
+  const owner=data&&data.owner&&data.owner.login,pinned=file&&file.raw_url||'';
+  const stable=owner&&file?'https://gist.githubusercontent.com/'+encodeURIComponent(owner)+'/'+data.id+'/raw/'+encodeURIComponent(file.filename):pinned;
+  if(!stable)throw Error('GitHub created the gist but did not return a raw URL.');
+  $('#gist-raw').value=stable;$('#gist-pinned').value=pinned;$('#gist-page').value=data.html_url||'';$('#gist-result').hidden=false;
+  GIST_TOKEN=token;
+  try{if($('#gist-remember').checked)localStorage.setItem(GIST_TOKEN_KEY,token);else localStorage.removeItem(GIST_TOKEN_KEY)}catch(_){}
+  const copied=await copyText(stable);
+  let opened=false;
+  if(tab&&!tab.closed){try{tab.opener=null}catch(_){}try{tab.location.replace(stable);opened=true}catch(_){}}
+  else{try{opened=!!window.open(stable,'_blank','noopener,noreferrer')}catch(_){}}
+  setGistStatus('Published'+(copied?' · raw URL copied':' · copy the URL below')+(opened?' · opened in a new tab':' · use Open (new tab was blocked)'),'good');
+  toast('Gist published'+(copied?' · raw URL copied':''));
+  btn.textContent='Publish again'
+ }catch(err){
+  if(tab&&!tab.closed)try{tab.close()}catch(_){}
+  const msg=err instanceof TypeError||/Failed to fetch|Load failed|NetworkError/i.test(err.message||'')?'Could not reach api.github.com. Check your connection, extensions or firewall.':(err.message||'Publishing failed.');
+  setGistStatus(msg,'err');btn.textContent='Try again'
+ }finally{GIST_BUSY=false;btn.disabled=false}
+});
+
+function setBg(){const v=$('#bg').value,r=document.documentElement.style;
+ if(v==='img'){const u=prompt('Backdrop image URL?');if(!u){$('#bg').value='mesh';return setBg()}r.setProperty('--pvbg',`url("${u.replace(/"/g,'%22')}")`)}
+ else r.setProperty('--pvbg',{mesh:'var(--mesh)',dark:'#0B0B0F',light:'#E9ECF2'}[v])}
+$('#bg').onchange=setBg;
+$('#gl').onchange=e=>document.body.classList.toggle('glass',e.target.checked);
+$('#test').oninput=stage;$('#gf').onchange=render;
+function setupNote(){const el=$('#setup');if(!el)return;const enabled=S.filters.filter(f=>f.isEnabled!==false),missing=enabled.filter(f=>!String(f.imageURL||'').trim()).length,failed=S.filters.filter(f=>SVG_ERRORS.has(f)).length;el.textContent=S.filters.length?`${enabled.length} enabled · ${missing} missing images · ${failed} SVG issues`:''}
+const imgEl=(s,a)=>{const i=new Image();i.alt=a||'';i.decoding='async';i.referrerPolicy='no-referrer';i.src=s;return i};
+function failHint(u){if(/^https?:\/\/(www\.)?github\.com\/[^\/]+\/[^\/]+\/blob\//i.test(u))return'This is a GitHub webpage, not the image file. Use the raw URL.';
+ if(!/^(https?:|data:image\/(?:svg\+xml|png|jpeg|webp|gif);base64,)/i.test(u))return'Use an HTTPS/HTTP image URL or a supported base64 image data URL.';
+ return'Could not load this image. Check the direct URL, public access and file availability.'}
+function imgRow(c,f){const r=c.querySelector('.imgrow');if(!r)return;const u=String(f.imageURL||'').trim();
+ r.innerHTML='<div class="pv imgbox"></div><div class="imginfo"><span class="st nt imgst"></span><button type="button" class="sm svg-upload-btn" data-svgup title="Upload a local .svg file and embed it as base64 (you can also drop an SVG onto this card)">'+ic('open')+' Upload SVG</button></div>';
+ const box=r.querySelector('.imgbox'),st=r.querySelector('.imgst');
+ const say=(cls,i,t)=>{st.className='st '+cls+' imgst';st.innerHTML=ic(i)+'<span>'+esc(t)+'</span>'};
+ if(!u){say('wn','alert','No image URL. The app may not render this badge.');return}
+ if(!/^(https?:|data:image\/(?:svg\+xml|png|jpeg|webp|gif);(?:[^,]*,))/i.test(u)){say('wn','alert',failHint(u));return}
+ const isEmbedded=isSvgDataUrl(u),err=SVG_ERRORS.get(f);
+ const i=imgEl(u,f.name);box.append(i);
+ say(err?'wn':isEmbedded?'ok':'nt',err?'alert':isEmbedded?'check':'info',err|| (isEmbedded?'Embedded SVG · artwork stored in JSON':isSvgUrl(u)?'SVG link · embeds on import':'External image · not converted'));
+ i.onload=()=>{if(!err&&isEmbedded)say('ok','check','Embedded SVG · '+i.naturalWidth+' × '+i.naturalHeight+' · stored in JSON');else if(!err&&!isSvgUrl(u))say('ok','check','Image loaded'+(i.naturalWidth?' · '+i.naturalWidth+' × '+i.naturalHeight:'')+'.')};
+ i.onerror=()=>{box.replaceChildren();say('wn','alert',err||failHint(u))}}
+
+let HS=[],HI=-1,HT;
+const sv=()=>JSON.stringify({f:S.filters,g:S.groups.map(groupRecord),e:S.extra,h:S.hg});
+const ub=()=>{$('#undo').disabled=HI<1;$('#redo').disabled=HI>=HS.length-1};
+function auto(){try{localStorage.setItem('nbl-session',JSON.stringify({s:sv(),n:fname}))}catch(_){}}
+function commit(){const s=sv();if(HS[HI]===s)return;HS=HS.slice(0,HI+1);HS.push(s);if(HS.length>100)HS.shift();HI=HS.length-1;ub();auto()}
+function resetHistory(){HS=[];HI=-1;commit()}
+function hist(d){const j=HI+d;if(j<0||j>=HS.length)return;HI=j;const o=JSON.parse(HS[j]);S={filters:o.f,groups:(o.g||[]).map(groupRecord),extra:o.e,hg:o.h};render(true);auto()}
+$('#undo').onclick=()=>hist(-1);$('#redo').onclick=()=>hist(1);
+addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();hist(e.shiftKey?1:-1)}});
+function ap(f,k){Object.assign(f,PRE[k](f))}
+function chkUI(){const missing=S.filters.filter(f=>f.isEnabled!==false&&!String(f.imageURL||'').trim());const el=$('#issues');el.innerHTML='';if(!missing.length)return;
+ const d=document.createElement('div');d.className='warn';d.innerHTML=ic('alert')+'<span>'+missing.length+' enabled badge(s) have no image URL and may not render.</span>';el.append(d)}
+$('#q').oninput=()=>render(true);
+$('#url').onclick=()=>{const u=prompt('Link to a badge .json (e.g. a raw GitHub link)');if(!u)return;
+ fetch(u).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.text()}).then(t=>load(t,u.split('?')[0].split('/').pop()||'badges.json')).catch(e=>alert('Could not load: '+e.message+'\nThe host must allow cross-origin reads (raw.githubusercontent.com does).'))};
+const th=t=>{document.documentElement.dataset.theme=t;try{localStorage.setItem('nbl-theme',t)}catch(_){}};
+th((()=>{try{return localStorage.getItem('nbl-theme')}catch(_){}})()||(window.matchMedia&&matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'));
+$('#th').onclick=()=>th(document.documentElement.dataset.theme==='light'?'dark':'light');
+$('#header-menu').addEventListener('click',e=>{if(e.target.closest('button'))$('#header-menu').open=false});
+try{const r=JSON.parse(localStorage.getItem('nbl-session')||'null');if(r){const o=JSON.parse(r.s);if(o.f&&o.f.length){S={filters:o.f,groups:(o.g||[]).map(groupRecord),extra:o.e,hg:o.h};fname=r.n||fname;setTimeout(async()=>{const seq=++LOAD_SEQ;const st=await processImportedSvgs(S.filters,seq);if(st.embedded||st.failed){render();commit()}syncGlobalSvgColorFromFilters();updateGlobalSvgUI();toast('Restored session'+(st.embedded?' · '+st.embedded+' SVGs embedded':'')+(st.failed?' · '+st.failed+' SVGs need attention':''))},300)}}}catch(_){}
+const hh=()=>document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');
+addEventListener('resize',hh);hh();
+const CA=['fill','stroke','stop-color','flood-color','lighting-color'];
+const SKIP=v=>/^\s*(none|transparent)\s*$/i.test(String(v));
+const SAFE_CSS_PROPS=new Set(['fill','stroke','fill-rule','clip-rule','stroke-width','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','fill-opacity','stroke-opacity','opacity','color','stop-color','stop-opacity','flood-color','flood-opacity','lighting-color','display','visibility','clip-path','mask','filter','vector-effect','shape-rendering','text-rendering','font-family','font-size','font-style','font-weight','text-anchor','dominant-baseline','letter-spacing','word-spacing']);
+function cleanCssDecls(css){return String(css||'').split(';').map(part=>{const k=part.indexOf(':');if(k<1)return'';const prop=part.slice(0,k).trim().toLowerCase(),val=part.slice(k+1).trim();
+ if(!SAFE_CSS_PROPS.has(prop)||!val||/[{}<>]/.test(val)||/javascript:|expression\s*\(|@import|behavior\s*:/i.test(val))return'';
+ if(/url\s*\(/i.test(val)&&!/^url\(\s*['"]?#[-\w:.]+['"]?\s*\)$/i.test(val))return'';
+ return prop+':'+val}).filter(Boolean).join(';')}
+function cleanStyleSheet(css){if(typeof css!=='string'||css.length>100000)return'';css=css.replace(/\/\*[\s\S]*?\*\//g,'');let out='',m,re=/([^{}]+)\{([^{}]*)\}/g;
+ while((m=re.exec(css))){const sel=m[1].trim();if(!sel||sel.startsWith('@')||!/^[\w\s.#,:>+~*\[\]="'-]+$/.test(sel))continue;const decl=cleanCssDecls(m[2]);if(decl)out+=sel+'{'+decl+'}'}return out}
+function svgParse(t){
+ if(typeof t!=='string'||!t.trim()||t.length>2*1024*1024||/<!DOCTYPE|<!ENTITY/i.test(t))return null;
+ const d=new DOMParser().parseFromString(t,'image/svg+xml'),r=d.documentElement;
+ if(!r||r.localName.toLowerCase()!=='svg'||d.querySelector('parsererror'))return null;
+ const allowed=new Set(['svg','g','style','defs','path','rect','circle','ellipse','line','polyline','polygon','text','tspan','title','desc','lineargradient','radialgradient','stop','clippath','mask','pattern','symbol','use','filter','fegaussianblur','feoffset','feblend','fecolormatrix','fecomponenttransfer','fefuncr','fefuncg','fefuncb','fefunca','fecomposite','femerge','femergenode','feflood','femorphology','feturbulence','fedisplacementmap','fediffuselighting','fedistantlight','fepointlight','fespotlight','fespecularlighting']);
+ [...d.querySelectorAll('*')].reverse().forEach(e=>{if(!allowed.has(e.localName.toLowerCase()))e.remove()});
+ const safeFrag=v=>/^#[A-Za-z_][\w:.-]*$/.test(String(v).trim());
+ [r,...d.querySelectorAll('*')].forEach(e=>{[...e.attributes].forEach(a=>{const n=a.name.toLowerCase(),v=String(a.value||'').trim();
+   if(n.startsWith('on')||n==='xml:base'||n==='src'||n==='srcset'){e.removeAttribute(a.name);return}
+   if(n==='href'||n==='xlink:href'){if(!safeFrag(v))e.removeAttribute(a.name);return}
+   if(n==='style'){const clean=cleanCssDecls(v);if(clean)e.setAttribute(a.name,clean);else e.removeAttribute(a.name);return}
+   if(/url\s*\(/i.test(v)&&!/url\(\s*['"]?#[-\w:.]+['"]?\s*\)/i.test(v))e.removeAttribute(a.name);
+   if(/javascript\s*:/i.test(v))e.removeAttribute(a.name);
+  });
+  if(e.localName.toLowerCase()==='style'){const clean=cleanStyleSheet(e.textContent);if(clean)e.textContent=clean;else e.remove()}
+ });
+ if(!r.getAttribute('xmlns'))r.setAttribute('xmlns','http://www.w3.org/2000/svg');
+ return d}
+const DECL=/(fill|stroke|stop-color|flood-color|lighting-color)(\s*:\s*)([^;}]+)/gi;
+function recolorSvgDoc(d,c){const p=parse(c);if(!d||p.bad)return d;const hex='#'+p.rgb,root=d.documentElement;
+ const nodes=[root,...d.querySelectorAll('*')];
+ nodes.forEach(e=>{CA.forEach(a=>{const v=e.getAttribute(a);if(v&&!SKIP(v))e.setAttribute(a,hex)});
+  const st=e.getAttribute('style');if(st){const cleaned=cleanCssDecls(st);const replaced=cleaned.replace(DECL,(m,a,sep,v)=>SKIP(v)?m:a+sep+hex);if(replaced)e.setAttribute('style',replaced);else e.removeAttribute('style')}
+  if(e.localName.toLowerCase()==='style')e.textContent=e.textContent.replace(DECL,(m,a,sep,v)=>SKIP(v)?m:a+sep+hex);
+ });
+ root.setAttribute('fill',hex);root.setAttribute('color',hex);
+ let wrapper=[...root.children].find(e=>e.localName.toLowerCase()==='g'&&e.getAttribute('data-nuvio-artwork-wrapper')==='1');
+ if(p.a<255){if(!wrapper){wrapper=d.createElementNS('http://www.w3.org/2000/svg','g');wrapper.setAttribute('data-nuvio-artwork-wrapper','1');const movable=[...root.childNodes].filter(n=>n.nodeType===1&&!['defs','title','desc','style'].includes(n.localName.toLowerCase()));root.appendChild(wrapper);movable.forEach(n=>wrapper.appendChild(n))}wrapper.setAttribute('opacity',(p.a/255).toFixed(4))}
+ else if(wrapper)wrapper.removeAttribute('opacity');
+ return d}
+function recolor(t,c){const d=svgParse(t);if(!d)return t;return new XMLSerializer().serializeToString(recolorSvgDoc(d,c))}
+function isSvgDataUrl(u){return /^data:image\/svg\+xml(?:;[^,]*)?,/i.test(String(u||''))}
+function isSvgUrl(u){try{return /^https?:$/.test(new URL(u,location.href).protocol)&&/\.svg$/i.test(new URL(u,location.href).pathname)}catch(_){return false}}
+function decodeSvgDataUrl(u){const m=/^data:image\/svg\+xml((?:;[^,]*)?),(.*)$/is.exec(String(u||''));if(!m)throw Error('Not an SVG data URL');
+ if(/;base64(?:;|$)/i.test(m[1])){const bin=atob(m[2].replace(/\s/g,'')),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new TextDecoder('utf-8',{fatal:true}).decode(bytes)}
+ return decodeURIComponent(m[2])}
+function encodeSvgDataUrl(xml){const bytes=new TextEncoder().encode(xml);let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));return'data:image/svg+xml;base64,'+btoa(bin)}
+async function fetchSvgText(url){let parsed;try{parsed=new URL(url,location.href)}catch(_){throw Error('Invalid SVG URL')}
+ if(!['http:','https:'].includes(parsed.protocol))throw Error('Only HTTP(S) SVG links can be embedded');
+ if(typeof AbortController==='undefined')throw Error('This browser does not support safe SVG fetch timeouts');
+ const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),10000);
+ try{const res=await fetch(parsed.href,{mode:'cors',credentials:'omit',redirect:'follow',signal:ctl.signal});if(!res.ok)throw Error('HTTP '+res.status);
+  if(res.url&&!['http:','https:'].includes(new URL(res.url).protocol))throw Error('Unsafe redirect target');
+  const declared=Number(res.headers.get('content-length')||0);if(declared>2*1024*1024)throw Error('SVG exceeds the 2 MB import limit');
+  let bytes;if(res.body&&res.body.getReader){const reader=res.body.getReader(),parts=[];let size=0;try{while(true){const q=await reader.read();if(q.done)break;size+=q.value.byteLength;if(size>2*1024*1024){await reader.cancel();throw Error('SVG exceeds the 2 MB import limit')}parts.push(q.value)}}finally{reader.releaseLock?.()}bytes=new Uint8Array(size);let off=0;parts.forEach(part=>{bytes.set(part,off);off+=part.byteLength})}else{bytes=new Uint8Array(await res.arrayBuffer());if(bytes.byteLength>2*1024*1024)throw Error('SVG exceeds the 2 MB import limit')}
+  const txt=new TextDecoder('utf-8',{fatal:true}).decode(bytes);const doc=svgParse(txt);if(!doc)throw Error('Response is not a valid supported SVG');return new XMLSerializer().serializeToString(doc)
+ }catch(e){if(e.name==='AbortError')throw Error('Timed out after 10 seconds');if(e instanceof TypeError)throw Error('Fetch blocked by CORS or network policy');throw e}finally{clearTimeout(timer)}}
+async function mapLimit(items,limit,fn){let next=0;const out=new Array(items.length);await Promise.all(Array.from({length:Math.min(limit,items.length)},async()=>{while(true){const i=next++;if(i>=items.length)return;out[i]=await fn(items[i])}}));return out}
+function applySvgTextColor(xml,color){const d=svgParse(xml);if(!d)throw Error('SVG sanitization failed');if(color&&!parse(color).bad)recolorSvgDoc(d,color);return new XMLSerializer().serializeToString(d)}
+async function processImportedSvgs(filters,seq){const stats={embedded:0,recolored:0,failed:0},remote=[];let total=0;
+ for(const f of filters){const u=String(f.imageURL||'').trim();if(isSvgDataUrl(u)){try{const clean=applySvgTextColor(decodeSvgDataUrl(u),f.textColor);const next=encodeSvgDataUrl(clean);if(next!==u){f.imageURL=next;stats.embedded++}if(f.textColor&&!parse(f.textColor).bad)stats.recolored++ ;SVG_ERRORS.delete(f)}catch(e){SVG_ERRORS.set(f,'Embedded SVG could not be processed: '+e.message);stats.failed++}}
+  else if(isSvgUrl(u))remote.push([f,u])}
+ let finished=0;await mapLimit(remote,8,async([f,url])=>{try{const xml=await fetchSvgText(url);if(seq!==LOAD_SEQ||f.imageURL!==url)return;
+   const byteCount=new TextEncoder().encode(xml).length;if(total+byteCount>20*1024*1024)throw Error('Total embedded SVG data would exceed 20 MB');total+=byteCount;
+   const colored=applySvgTextColor(xml,f.textColor);f.imageURL=encodeSvgDataUrl(colored);SVG_ERRORS.delete(f);stats.embedded++;if(f.textColor&&!parse(f.textColor).bad)stats.recolored++
+  }catch(e){if(seq!==LOAD_SEQ)return;SVG_ERRORS.set(f,'SVG not embedded: '+e.message+' · original URL retained');stats.failed++}finally{finished++;if(seq===LOAD_SEQ&&$('#setup'))$('#setup').textContent='Embedding SVGs · '+finished+' / '+remote.length+' checked…'}});
+ return stats}
+async function embedOneFilter(f){const url=String(f.imageURL||'').trim();if(!isSvgUrl(url))return;try{const xml=await fetchSvgText(url);if(f.imageURL!==url)return;const colored=applySvgTextColor(xml,f.textColor);f.imageURL=encodeSvgDataUrl(colored);SVG_ERRORS.delete(f);const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');if(card){card.querySelector('.pvw').replaceChildren(chip(f));imgRow(card,f)}stage();commit();toast('SVG embedded and artwork color applied')}catch(e){SVG_ERRORS.set(f,'SVG not embedded: '+e.message+' · original URL retained');const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');if(card)imgRow(card,f);toast('Could not embed SVG: '+e.message)}}
+function applyTextColorToFilter(f){const u=String(f.imageURL||'');if(!isSvgDataUrl(u))return false;try{const xml=decodeSvgDataUrl(u),colored=applySvgTextColor(xml,f.textColor);f.imageURL=encodeSvgDataUrl(colored);SVG_ERRORS.delete(f);return true}catch(e){SVG_ERRORS.set(f,'SVG artwork color could not be applied: '+e.message);return false}}
+function scheduleTextColor(f){clearTimeout(TEXT_COLOR_TIMERS.get(f));TEXT_COLOR_TIMERS.set(f,setTimeout(()=>{if(applyTextColorToFilter(f)){const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');if(card){card.querySelector('.pvw').replaceChildren(chip(f));imgRow(card,f)}stage();commit()}else if(isSvgUrl(f.imageURL)){embedOneFilter(f)}},110))}
+
+let GLOBAL_RECOLORING=false;
+const isSvgFilter=f=>isSvgDataUrl(f.imageURL)||isSvgUrl(f.imageURL);
+function globalSvgTargets(){return S.filters.filter(isSvgFilter)}
+function globalColorValue(){const p=parse($('#global-svg-hex').value);return p.bad?null:mk(p.rgb,p.a)}
+function setGlobalColorInputs(value){const p=parse(value);if(p.bad)return;$('#global-svg-color').value='#'+p.rgb.toLowerCase();$('#global-svg-alpha').value=p.a;$('#global-svg-hex').value=mk(p.rgb,p.a);$('#global-svg-alpha-label').textContent=Math.round(p.a/2.55)+'%'}
+function updateGlobalSvgUI(){const targets=globalSvgTargets(),embedded=targets.filter(f=>isSvgDataUrl(f.imageURL)).length,linked=targets.length-embedded;
+ $('#global-svg-count').textContent=targets.length;$('#global-svg-breakdown').textContent=embedded+' embedded · '+linked+' linked';
+ $('#global-svg-apply').disabled=!targets.length||GLOBAL_RECOLORING||IMPORT_EMBEDDING||parse($('#global-svg-hex').value).bad;
+ if(!targets.length&&!GLOBAL_RECOLORING)$('#global-svg-status').textContent=S.filters.length?'No SVG image URLs detected. Raster images are left unchanged.':'SVG artwork only · raster images are skipped.';
+ else if(targets.length&&!GLOBAL_RECOLORING&&$('#global-svg-status').dataset.kind!=='custom')$('#global-svg-status').textContent='Ready to recolor '+targets.length+' SVG badge'+(targets.length===1?'':'s')+'. Linked SVGs will be fetched and embedded if CORS allows.';
+}
+function syncGlobalSvgColorFromFilters(){const vals=globalSvgTargets().map(f=>String(f.textColor||'')).filter(v=>!parse(v).bad).map(v=>{const p=parse(v);return mk(p.rgb,p.a)});const unique=[...new Set(vals)];
+ if(unique.length===1){setGlobalColorInputs(unique[0]);$('#global-svg-status').dataset.kind='';$('#global-svg-status').textContent='Current SVG artwork color: '+unique[0]+'.'}
+ else if(unique.length>1){$('#global-svg-status').dataset.kind='mixed';$('#global-svg-status').textContent='The SVG badges currently use different artwork colors. Apply one color below to unify them.'}
+ updateGlobalSvgUI()}
+function handleGlobalColorInput(from){let c;
+ if(from==='hex'){const p=parse($('#global-svg-hex').value);if(p.bad)return;setGlobalColorInputs(mk(p.rgb,p.a));}
+ else{c=mk($('#global-svg-color').value.slice(1).toUpperCase(),$('#global-svg-alpha').value);setGlobalColorInputs(c)}
+ $('#global-svg-status').dataset.kind='custom';$('#global-svg-status').textContent='Selected '+globalColorValue()+'. Apply to update every SVG badge.';updateGlobalSvgUI()}
+$('#global-svg-color').addEventListener('input',()=>handleGlobalColorInput('picker'));
+$('#global-svg-alpha').addEventListener('input',()=>handleGlobalColorInput('alpha'));
+$('#global-svg-hex').addEventListener('input',()=>{const p=parse($('#global-svg-hex').value);if(p.bad){$('#global-svg-apply').disabled=true;$('#global-svg-status').dataset.kind='custom';$('#global-svg-status').textContent='Enter a valid #RRGGBB or #AARRGGBB color.';return}handleGlobalColorInput('hex')});
+$('#global-svg-apply').addEventListener('click',async()=>{
+ if(GLOBAL_RECOLORING||IMPORT_EMBEDDING)return;const targets=globalSvgTargets(),color=globalColorValue();if(!targets.length){toast('No SVG badges found');return}if(!color||parse(color).bad){toast('Enter a valid #RRGGBB or #AARRGGBB color');return}
+ GLOBAL_RECOLORING=true;const btn=$('#global-svg-apply'),status=$('#global-svg-status');btn.disabled=true;btn.textContent='Recoloring…';status.dataset.kind='custom';status.textContent='Recoloring '+targets.length+' SVG badges…';
+ let done=0,failed=0,totalBytes=0;const results=await mapLimit(targets,4,async f=>{const original=String(f.imageURL||'');try{
+   let xml;if(isSvgDataUrl(original))xml=decodeSvgDataUrl(original);else if(isSvgUrl(original))xml=await fetchSvgText(original);else throw Error('Image is no longer an SVG');
+   if(String(f.imageURL||'')!==original)throw Error('Image URL changed while recoloring');
+   const colored=applySvgTextColor(xml,color),bytes=new TextEncoder().encode(colored);if(totalBytes+bytes.length>20*1024*1024)throw Error('Global embedded SVG limit is 20 MB');totalBytes+=bytes.length;
+   f.imageURL=encodeSvgDataUrl(colored);f.textColor=color;SVG_ERRORS.delete(f);done++;return true;
+  }catch(e){if(String(f.imageURL||'')===original)SVG_ERRORS.set(f,'Global recolor failed: '+e.message+' · original image kept');failed++;return false}});
+ GLOBAL_RECOLORING=false;render();commit();syncGlobalSvgColorFromFilters();
+ btn.textContent='Recolor all SVGs';updateGlobalSvgUI();status.dataset.kind=failed?'mixed':'success';status.textContent=done+' SVG'+(done===1?'':'s')+' recolored and embedded'+(failed?' · '+failed+' could not be fetched or processed; original images were preserved.':' successfully.');
+ toast(done+' recolored'+(failed?' · '+failed+' skipped':''));
+});
+
+/* ---- Upload local SVG → sanitized base64 data URL ---- */
+const SVG_UPLOAD_MAX=2*1024*1024;
+let SVG_UPLOAD_TARGET=null;
+const svgFileInput=document.createElement('input');svgFileInput.type='file';svgFileInput.accept='.svg,image/svg+xml';svgFileInput.hidden=true;document.body.appendChild(svgFileInput);
+function isSvgFile(file){return!!file&&(/\.svg$/i.test(file.name||'')||file.type==='image/svg+xml')}
+function clearSvgDrop(){document.querySelectorAll('.card.svg-drop').forEach(c=>c.classList.remove('svg-drop'))}
+async function uploadSvgToFilter(f,file){
+ if(!f||!file)return;
+ if(!isSvgFile(file)){toast('Please choose an .svg file');return}
+ if(file.size>SVG_UPLOAD_MAX){toast('SVG exceeds the 2 MB limit');return}
+ try{
+  let txt;try{txt=new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer()).replace(/^\uFEFF/,'')}catch(_){throw Error('File could not be read as UTF-8 text')}
+  const doc=svgParse(txt);if(!doc)throw Error('Not a valid SVG (or it uses unsupported content)');
+  if(f.textColor&&!parse(f.textColor).bad)recolorSvgDoc(doc,f.textColor);
+  const clean=new XMLSerializer().serializeToString(doc),dataUrl=encodeSvgDataUrl(clean);
+  if(S.filters.indexOf(f)<0)return;
+  f.imageURL=dataUrl;SVG_ERRORS.delete(f);
+  const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');
+  if(card){const inp=card.querySelector('input[data-k="imageURL"]');if(inp)inp.value=dataUrl;card.querySelector('.pvw').replaceChildren(chip(f));imgRow(card,f)}
+  stage();chkUI();updateGlobalSvgUI();commit();
+  toast('SVG uploaded and embedded as base64 · '+Math.max(1,Math.round(dataUrl.length/1024))+' KB')
+ }catch(err){toast('Could not use "'+(file.name||'file')+'": '+err.message)}
+}
+$('#list').addEventListener('click',e=>{const b=e.target.closest('button[data-svgup]');if(!b)return;e.preventDefault();
+ const card=b.closest('.card'),f=card&&S.filters[+card.dataset.i];if(!f)return;
+ SVG_UPLOAD_TARGET=f;svgFileInput.value='';svgFileInput.click()});
+svgFileInput.addEventListener('change',()=>{const file=svgFileInput.files[0],f=SVG_UPLOAD_TARGET;SVG_UPLOAD_TARGET=null;svgFileInput.value='';if(file&&f)uploadSvgToFilter(f,file)});
+addEventListener('dragover',e=>{const card=e.target.closest&&e.target.closest('.card');const hasFiles=e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');
+ document.querySelectorAll('.card.svg-drop').forEach(c=>{if(c!==card)c.classList.remove('svg-drop')});
+ if(card&&hasFiles)card.classList.add('svg-drop')});
+addEventListener('dragleave',e=>{if(!e.relatedTarget)clearSvgDrop()});
+
+const SZ={stream:[20,16,34,92,3,2],player:[17,13,28,78,3,2],preview:[24,18,38,112,4,3]};
+function setSz(){const a=SZ[$('#sz').value],r=document.documentElement.style;['--ch','--ih','--iminw','--imaxw','--ph','--pv'].forEach((k,j)=>r.setProperty(k,a[j]+'px'));$('#stage').style.setProperty('--z',$('#zm').value)}
+$('#sz').onchange=$('#zm').onchange=setSz;
+$('#pre').innerHTML=PO;
+render();
+</script>
+</body></html>

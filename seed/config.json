@@ -1,0 +1,76 @@
+{
+  "v": 1,
+  "groups": [
+    { "id": "g1", "name": "Projects", "order": 1 }
+  ],
+  "projects": [
+    {
+      "id": "p1",
+      "groupId": "g1",
+      "name": "SVG Composer",
+      "slug": "svg-composer",
+      "icon": {
+        "mode": "iconify",
+        "id": "mdi:pencil",
+        "svgUrl": "https://api.iconify.design/mdi/pencil.svg",
+        "license": "Apache-2.0"
+      },
+      "kind": "repo",
+      "assetPath": "projects/svg-composer/",
+      "entry": "index.html",
+      "public": false,
+      "url": null
+    },
+    {
+      "id": "p2",
+      "groupId": "g1",
+      "name": "Boxy SVG Editor",
+      "slug": "boxy-svg-editor",
+      "icon": {
+        "mode": "iconify",
+        "id": "mdi:vector-square",
+        "svgUrl": "https://api.iconify.design/mdi/vector-square.svg",
+        "license": "Apache-2.0"
+      },
+      "kind": "repo",
+      "assetPath": "projects/boxy-svg-editor.html",
+      "entry": null,
+      "public": false,
+      "url": null
+    },
+    {
+      "id": "p3",
+      "groupId": "g1",
+      "name": "Nuvio Badge Patterns",
+      "slug": "nuvio-badge-patterns",
+      "icon": {
+        "mode": "iconify",
+        "id": "mdi:view-grid",
+        "svgUrl": "https://api.iconify.design/mdi/view-grid.svg",
+        "license": "Apache-2.0"
+      },
+      "kind": "repo",
+      "assetPath": "projects/nuvio-badge-patterns.html",
+      "entry": null,
+      "public": false,
+      "url": null
+    },
+    {
+      "id": "p4",
+      "groupId": "g1",
+      "name": "Nuvio Badge Studio",
+      "slug": "nuvio-badge-studio",
+      "icon": {
+        "mode": "iconify",
+        "id": "mdi:star",
+        "svgUrl": "https://api.iconify.design/mdi/star.svg",
+        "license": "Apache-2.0"
+      },
+      "kind": "repo",
+      "assetPath": "projects/nuvio-badge-studio.html",
+      "entry": null,
+      "public": false,
+      "url": null
+    }
+  ]
+}

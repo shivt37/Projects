@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local development (gitignored)
+ADMIN_PIN=123456
+SESSION_SECRET=local-dev-secret-change-me
+AUTH_ENABLED=true
