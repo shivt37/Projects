@@ -1,4 +1,5 @@
 import { handleApi } from "./api.js";
+import { handleProject } from "./projects.js";
 import {
   checkSession,
   handleLogin,
@@ -50,6 +51,11 @@ export default {
 
     if (url.pathname === "/logout") {
       return handleLogout(request);
+    }
+
+    if (url.pathname.startsWith("/p/")) {
+      const [slug, ...rest] = url.pathname.slice(3).split("/").filter(Boolean);
+      return handleProject(request, env, slug, rest.join("/"));
     }
 
     if (isAuthEnabled(env)) {
