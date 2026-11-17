@@ -31,10 +31,37 @@
   // ---------------------------------------------------------------- matrices
   function matParse(s) {
     if (!s) return [1, 0, 0, 1, 0, 0];
-    const n = (s.match(/[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/g) || []).map(Number);
-    if (n.length === 6) return [n[0], n[1], n[2], n[3], n[4], n[5]];
-    if (n.length === 0) return [1, 0, 0, 1, 0, 0];
-    throw new Error('unsupported transform: ' + s);
+    const str = String(s).trim();
+    if (!str) return [1, 0, 0, 1, 0, 0];
+    const numRe = /[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/g;
+    const fnRe = /([A-Za-z]+)\s*\(([^)]*)\)/g;
+    const fns = [];
+    let m;
+    while ((m = fnRe.exec(str))) fns.push({ name: m[1].toLowerCase(), text: m[2] });
+    if (!fns.length) {
+      const n = (str.match(numRe) || []).map(Number);
+      if (n.length === 6) return [n[0], n[1], n[2], n[3], n[4], n[5]];
+      if (n.length === 0) return [1, 0, 0, 1, 0, 0];
+      throw new Error('unsupported transform: ' + s);
+    }
+    if (!/^[\s,]*$/.test(str.replace(fnRe, ''))) throw new Error('unsupported transform: ' + s);
+    let out = [1, 0, 0, 1, 0, 0];
+    for (const fn of fns) {
+      const n = (fn.text.match(numRe) || []).map(Number);
+      let part;
+      if (fn.name === 'matrix' && n.length === 6) part = n.slice(0, 6);
+      else if (fn.name === 'translate' && (n.length === 1 || n.length === 2)) part = [1, 0, 0, 1, n[0], n.length === 2 ? n[1] : 0];
+      else if (fn.name === 'scale' && (n.length === 1 || n.length === 2)) part = [n[0], 0, 0, n.length === 2 ? n[1] : n[0], 0, 0];
+      else if (fn.name === 'rotate' && (n.length === 1 || n.length === 3)) {
+        const r = n[0] * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+        const rot = [c, sn, -sn, c, 0, 0];
+        part = n.length === 3 ? matMul(matMul([1, 0, 0, 1, n[1], n[2]], rot), [1, 0, 0, 1, -n[1], -n[2]]) : rot;
+      } else if (fn.name === 'skewx' && n.length === 1) part = [1, 0, Math.tan(n[0] * Math.PI / 180), 1, 0, 0];
+      else if (fn.name === 'skewy' && n.length === 1) part = [1, Math.tan(n[0] * Math.PI / 180), 0, 1, 0, 0];
+      else throw new Error('unsupported transform: ' + s);
+      out = matMul(out, part);
+    }
+    return out;
   }
   function matMul(a, b) { // a after b
     return [

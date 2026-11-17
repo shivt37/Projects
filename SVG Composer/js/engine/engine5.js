@@ -190,9 +190,12 @@
   // ------------------------------------------------- geometry: anisotropic offset
   function heightRestore(poly, original) {
     const a = E.bounds(original), b = E.bounds(poly);
-    const s = (a[3] - a[1]) / (b[3] - b[1]);
+    const dh = b[3] - b[1];
+    if (!(dh > 0)) return null;
+    const s = (a[3] - a[1]) / dh;
+    if (!Number.isFinite(s)) return null;
     const p = E.transformPoly(poly, (x, y) => [(x - (b[0] + b[2]) / 2) * s + (a[0] + a[2]) / 2,
-                                              (y - (b[1] + b[3]) / 2) * s + (a[1] + a[3]) / 2]);
+                                               (y - (b[1] + b[3]) / 2) * s + (a[1] + a[3]) / 2]);
     return p;
   }
 
