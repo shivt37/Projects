@@ -203,7 +203,7 @@ details.settings[open]>summary:after{content:"−"}
 .bc-panel{background:linear-gradient(180deg,#171f2a,#121923);border:1px solid var(--bc-line);border-radius:12px;min-width:0;overflow:hidden}
 .bc-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;border-bottom:1px solid var(--bc-line);font-size:11px;font-weight:750}.bc-panel-body{padding:10px 11px}.bc-muted{font-size:9px;color:var(--bc-muted);line-height:1.5}
 .bc-layer-list{display:flex;flex-direction:column;gap:5px;max-height:560px;overflow:auto}.bc-layer{display:flex;align-items:center;gap:5px;padding:7px 7px;border:1px solid transparent;border-radius:8px;background:#111923;min-width:0;cursor:pointer}
-.bc-layer-select{display:none;flex:none;width:16px;height:16px;accent-color:#8ab4f8;cursor:pointer;margin:0}
+.bc-layer-select{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;flex:none;accent-color:#8ab4f8;cursor:pointer;margin:0}.bc-layer:focus-within{outline:2px solid #8fb4ec;outline-offset:2px;border-color:#526c8d}
 .bc-layer.key-object{border-color:#d4a94b;background:#2b281d}
 .bc-key-tag{font-size:8px;color:#f4d58a;background:#51401d;border-radius:4px;padding:2px 4px}
 .bc-layer-key[aria-pressed="true"]{color:#f4d58a;background:#51401d}
@@ -242,7 +242,7 @@ details.settings[open]>summary:after{content:"−"}
 
 
 @media(max-width:720px){
- .bc-layer-select{display:block;width:22px;height:22px;min-width:22px}
+ .bc-layer-select{position:static;width:22px;height:22px;min-width:22px;opacity:1;pointer-events:auto}
  .bc-layer{min-height:43px;padding:7px 7px;gap:6px}
  .bc-layer-name{font-size:11px}
  .bc-layer-type{font-size:8px}
@@ -726,3 +726,12 @@ details.settings[open]>summary:after{content:"−"}
   }
 }
 
+
+@media(forced-colors:active){
+  .segmented button.active,.stage-tools button.active,.mode-switch button.active,.bc-btn.active{border:2px solid Highlight;outline:2px solid Highlight;outline-offset:-2px}
+  .bc-layer.selected,.bc-layer.multi{outline:2px solid Highlight}
+  .bc-layer.key-object{outline:2px solid ButtonText}
+  .status.ok,.bc-status.ok,.bc-export-status.ok{color:CanvasText}
+  .status.error,.bc-status.error,.bc-export-status.error{color:Mark}
+  .bc-stage{border:1px solid CanvasText}
+}
