@@ -6421,7 +6421,7 @@ $('bcProjectFile').addEventListener('change',async event=>{
  }catch(err){status('Project could not be opened: '+(err?.message||String(err)),'error');}
  finally{event.target.value='';}
 });
-function exportSettingsManifest(settings,details={}){return JSON.stringify({application:'Glyph Studio Pro',version:'0.6.62',exportedAt:new Date().toISOString(),fileName:settings.fileName,canvas:{width:W,height:H},settings:{...settings},result:details},null,2);}
+function exportSettingsManifest(settings,details={}){return JSON.stringify({application:'Glyph Studio Pro',version:'0.6.103',exportedAt:new Date().toISOString(),fileName:settings.fileName,canvas:{width:W,height:H},settings:{...settings},result:details},null,2);}
 let bcExportBusy=false;
 async function runBcExport(action){if(bcExportBusy)return;bcExportBusy=true;const buttons=['bcExportNowSvg','bcExportNowPng','bcExportNowZip','bcExportNowAll'].map(id=>$(id));buttons.forEach(b=>b.disabled=true);const report=$('bcExportStatus');report.className='bc-export-status';report.textContent='Preparing export…';try{
  const settings=readBcExportSettings();persistBcExportSettings();const result=await createConfiguredSvg(settings);const base=safeExportBaseName(settings.fileName||'badge-composition');
