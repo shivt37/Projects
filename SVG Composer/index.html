@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+<a id="skipToWork" class="skip-link" href="#workspacePanel">Skip to work area</a>
 <div class="app">
   <header class="topbar">
     <div class="brand">
@@ -18,8 +19,8 @@
     <div class="top-actions"><button class="history-btn" id="undoBtn" type="button" disabled title="Undo (Ctrl+Z)">↶ Undo</button><button class="history-btn" id="redoBtn" type="button" disabled title="Redo (Ctrl+Y)">↷ Redo</button><span class="pill">Local processing · SVG paths</span></div>
   </header>
   <nav class="mode-switch" aria-label="Studio mode">
-    <button id="modeTextBtn" class="active" type="button">Text to SVG</button>
-    <button id="modeBadgeBtn" type="button">Badge Composer</button>
+    <button id="modeTextBtn" class="active" type="button" aria-pressed="true">Text to SVG</button>
+    <button id="modeBadgeBtn" type="button" aria-pressed="false">Badge Composer</button>
   </nav>
 
   <!-- 0.6.26 (Fix 5): Lucide icon subset — ISC License (c) Lucide Contributors, https://lucide.dev/license -->
@@ -124,7 +125,7 @@
             <button class="font-drop" id="fontPick" type="button">
               <span class="file-icon">Aa</span><span class="file-copy"><strong id="fontName">Choose a font file</strong><span id="fontInfo">TTF, OTF or WOFF · file stays on device; font parser loads from CDN</span></span><svg class="gsp-icon" aria-hidden="true"><use href="#gsp-i-arrow-up-right"></use></svg>
             </button>
-            <input id="fontFile" aria-label="Upload primary font file" type="file" accept=".otf,.ttf,.woff,font/otf,font/ttf,font/woff">
+            <input id="fontFile" aria-label="Upload primary font file" type="file" tabindex="-1" accept=".otf,.ttf,.woff,font/otf,font/ttf,font/woff">
           </div>
           <div class="field">
             <div class="label-row"><label for="fontSize">Source size</label><span class="value" id="fontSizeVal">48 px</span></div>
@@ -152,7 +153,7 @@
               <div class="field" style="padding-top:12px;border-top:1px solid var(--line-soft)">
                 <div class="label-row"><label for="glyphSelect">Individual character</label><span class="value" id="glyphOffsetVal">0 px</span></div>
                 <div class="glyph-controls">
-                  <select id="glyphSelect" aria-label="Choose character position"><option value="0">1 · H</option></select>
+                  <select id="glyphSelect" aria-label="Individual character"><option value="0">1 · H</option></select>
                   <input id="glyphOffset" type="number" min="-40" max="40" step="0.25" value="0" aria-label="Selected character horizontal offset">
                   <button class="mini-btn" id="resetGlyph" type="button" title="Reset selected character to its original position">Reset</button>
                 </div>
@@ -179,7 +180,7 @@
                 <div class="field"><div class="label-row"><label for="targetHeight">Canvas height</label><span class="value">px</span></div><input id="targetHeight" type="number" min="1" max="5000" value="50"></div>
                 <div class="field"><div class="label-row"><label for="canvasW">Canvas width</label><span class="value">px</span></div><input id="canvasW" type="number" min="1" max="10000" value="158"></div>
               </div>
-              <div class="label-row"><label>Margins</label><label class="margin-all">All sides<input id="padAll" type="number" min="0" max="1000" value="8" aria-label="Set all four margins"></label></div>
+              <div class="label-row"><label>Margins</label><label class="margin-all">All sides<input id="padAll" type="number" min="0" max="1000" value="8" aria-label="All sides"></label></div>
               <div class="margin-grid">
                 <label class="margin-unit">T<input id="padTop" type="number" min="0" max="1000" value="8" aria-label="Top margin"></label>
                 <label class="margin-unit">R<input id="padRight" type="number" min="0" max="1000" value="8" aria-label="Right margin"></label>
@@ -189,11 +190,11 @@
               <div class="hint">Auto width calculates the SVG width from the visible artwork and left/right margins without changing your chosen font size. Tall ascenders and descenders may use some of the top/bottom margin. Increase Canvas height if the full outline would extend beyond the artboard.</div>
               <div class="field" style="margin-top:13px">
                 <div class="label-row"><label>Horizontal alignment</label></div>
-                <div class="segmented" id="hAlign"><button data-value="start">Left</button><button data-value="middle" class="active">Center</button><button data-value="end">Right</button></div>
+                <div class="segmented" id="hAlign" role="group" aria-label="Horizontal alignment"><button data-value="start" aria-pressed="false">Left</button><button data-value="middle" class="active" aria-pressed="true">Center</button><button data-value="end" aria-pressed="false">Right</button></div>
               </div>
               <div class="field">
                 <div class="label-row"><label>Vertical alignment</label></div>
-                <div class="segmented" id="vAlign"><button data-value="start">Top</button><button data-value="middle" class="active">Center</button><button data-value="end">Bottom</button></div>
+                <div class="segmented" id="vAlign" role="group" aria-label="Vertical alignment"><button data-value="start" aria-pressed="false">Top</button><button data-value="middle" class="active" aria-pressed="true">Center</button><button data-value="end" aria-pressed="false">Bottom</button></div>
               </div>
               <div class="field" style="margin-top:12px;border-top:1px solid var(--line-soft);padding-top:12px">
                 <div class="label-row"><label for="horizontalBasis">Horizontal reference</label></div>
@@ -243,7 +244,7 @@
             <summary><span class="summary-copy">Reference match<small>Overlay an existing SVG or image</small></span><span class="summary-tools"><button class="section-reset" id="resetReference" type="button">Reset</button></span></summary>
             <div class="details-body">
               <button class="font-drop" id="referencePick" type="button"><span class="file-icon">◎</span><span class="file-copy"><strong id="referenceName">Choose reference artwork</strong><span>SVG, PNG, JPG or WebP</span></span><svg class="gsp-icon" aria-hidden="true"><use href="#gsp-i-arrow-up-right"></use></svg></button>
-              <input id="referenceFile" aria-label="Upload reference artwork" type="file" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp">
+              <input id="referenceFile" aria-label="Upload reference artwork" type="file" tabindex="-1" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp">
               <div class="field" style="margin-top:12px">
                 <div class="label-row"><label for="referenceOpacity">Overlay opacity</label><span class="value" id="referenceOpacityVal">42%</span></div>
                 <input id="referenceOpacity" type="range" min="5" max="90" value="42">
@@ -267,7 +268,7 @@
             <summary><span class="summary-copy">Font comparison<small>Compare up to three additional typefaces</small></span><span class="summary-tools"><button class="section-reset" id="resetComparison" type="button">Reset</button></span></summary>
             <div class="details-body">
               <button class="font-drop" id="comparePick" type="button"><span class="file-icon">Ab</span><span class="file-copy"><strong id="compareName">Choose comparison font</strong><span id="compareInfo">Upload up to three additional font files</span></span><svg class="gsp-icon" aria-hidden="true"><use href="#gsp-i-arrow-up-right"></use></svg></button>
-              <input id="compareFile" aria-label="Upload comparison font files" type="file" accept=".otf,.ttf,.woff,font/otf,font/ttf,font/woff" multiple>
+              <input id="compareFile" aria-label="Upload comparison font files" type="file" tabindex="-1" accept=".otf,.ttf,.woff,font/otf,font/ttf,font/woff" multiple>
               <div class="inline-actions" style="margin-top:9px"><button class="mini-btn" id="removeCompare" type="button" disabled>Clear comparison</button></div>
               <div class="compare-note">Add up to three comparison fonts. All use the active shaping engine and visual settings; each font is shaped from its own font data. The primary font remains the main export source.</div><div class="inline-actions" style="margin-top:9px"><button class="mini-btn" id="exportCompareSheet" type="button" disabled>Download comparison sheet</button></div>
             </div>
@@ -322,11 +323,11 @@
       </section>
     </aside>
 
-    <section class="workspace">
+    <section class="workspace" id="workspacePanel" tabindex="-1">
       <section class="card workspace-card">
         <div class="workspace-head">
           <div><h2>Live canvas</h2><div class="workspace-sub">A real SVG preview, not a raster mockup</div></div>
-          <div class="stage-tools"><button id="checkerToggle" class="active" type="button">Checkerboard</button></div>
+          <div class="stage-tools"><button id="checkerToggle" class="active" type="button" aria-pressed="true">Checkerboard</button></div>
         </div>
         <div class="preview-grid" id="previewGrid">
           <div class="preview-stage">
@@ -371,7 +372,7 @@
  <div class="bc-app">
   <div class="bc-top">
    <div class="bc-title"><h2>Badge Composer</h2><p>Layer-based SVG design · native vector output · local project files</p></div>
-   <div class="bc-actions" aria-label="Document actions">
+   <div class="bc-actions">
     <div class="bc-action-cluster"><span class="bc-action-caption">DOCUMENT</span><button class="bc-btn" id="bcNew">New</button><select class="bc-btn" id="bcPresetSelect" aria-label="Choose badge template"><option value="">Templates…</option><option value="bluray">BluRay</option><option value="dolbyVision">Dolby Vision</option><option value="dolbyAtmos">Dolby Atmos</option><option value="dolbyDigital">Dolby Digital+</option><option value="empty">Blank canvas</option></select><button class="bc-btn" id="bcPresetMenu">Load</button></div>
     <div class="bc-action-cluster"><span class="bc-action-caption">IMPORT</span><button class="bc-btn" id="bcImportSvg">SVG files</button><button class="bc-btn" id="bcImportSvgUrl">SVG from URL</button><button class="bc-btn" id="bcImportProject">Open project</button></div>
     <div class="bc-action-cluster"><span class="bc-action-caption">SAVE & EXPORT</span><button class="bc-btn" id="bcSaveProject" type="button">Save project</button><button class="bc-btn primary bc-export-btn" id="bcOpenExport" type="button" aria-haspopup="dialog" aria-controls="bcExportDialog">Export…</button></div>
@@ -385,7 +386,7 @@
    <button class="bc-btn" id="bcLoadTemplate" type="button">Load</button>
    <button class="bc-btn bc-danger" id="bcDeleteTemplate" type="button" disabled>Delete</button><button class="bc-btn" id="bcExportTemplate" type="button">Download template</button><button class="bc-btn" id="bcImportTemplate" type="button">Import template</button><input id="bcTemplateFile" type="file" accept=".json,application/json" hidden>
   </div>
-  <div class="bc-insertbar" aria-label="Insert objects">
+  <div class="bc-insertbar">
    <div class="bc-insert-group"><span class="bc-insert-caption">TYPE</span><button class="bc-tool bc-tool-primary" data-add="text" type="button">＋ Text</button></div>
    <div class="bc-insert-group"><span class="bc-insert-caption">SHAPES</span><button class="bc-tool" data-add="rect" type="button">Rectangle</button><button class="bc-tool" data-add="circle" type="button">Circle</button><button class="bc-tool" data-add="ellipse" type="button">Ellipse</button><button class="bc-tool" data-generated="polygon" type="button">Polygon</button><button class="bc-tool" data-generated="star" type="button">Star</button><button class="bc-tool" data-add="line" type="button">Line</button></div>
    <div class="bc-insert-group"><span class="bc-insert-caption">ASSETS</span><button class="bc-tool" data-add="image" type="button">Image</button><button class="bc-tool" id="bcAssetToggle" type="button">Icon library</button></div>
@@ -393,7 +394,7 @@
   <div class="bc-tool-dock">
    <details class="bc-tool-panel" open><summary><span>Path & geometry tools</span><small>Refine · offset · round · boolean</small></summary>
     <div class="bc-tool-panel-body">
-     <div class="bc-toolbar" role="toolbar" aria-label="Path refinement"><span class="bc-tool-label">Select one path or a group of paths</span><label class="bc-tool-label" for="bcPathTolerance">Tolerance</label><input id="bcPathTolerance" type="number" min="0.1" max="20" step="0.1" value="1" style="width:58px" aria-label="Path simplify tolerance"><button class="bc-tool" data-path-refine="simplify" type="button">Simplify</button><button class="bc-tool" data-path-refine="reverse" type="button">Reverse</button><button class="bc-tool" data-path-refine="toggle-close" type="button">Close / Open</button><button class="bc-tool" data-path-refine="cleanup" type="button">Normalize</button><label class="bc-tool-label" for="bcPathRound">Smart fillet radius</label><input id="bcPathRound" type="number" min="0" max="200" step="0.5" value="3" style="width:66px" aria-label="Default smart fillet radius in local SVG units"><label class="bc-tool-label" for="bcPathRoundPerCorner">Per-corner radii</label><input id="bcPathRoundPerCorner" type="text" placeholder="e.g. 2, 5, 0" style="width:112px" aria-label="Optional comma-separated radius for each corner"><button class="bc-tool" data-path-round-preview type="button">Preview</button><button class="bc-tool" data-path-round type="button">Apply fillet</button><button class="bc-tool" data-path-round-reset type="button">Reset preview</button><span class="bc-tool-label" id="bcPathRoundPreviewState" role="status" aria-live="polite">Select supported closed paths.</span></div>
+     <div class="bc-toolbar" role="toolbar" aria-label="Path refinement"><span class="bc-tool-label">Select one path or a group of paths</span><label class="bc-tool-label" for="bcPathTolerance">Tolerance</label><input id="bcPathTolerance" type="number" min="0.1" max="20" step="0.1" value="1" style="width:58px" aria-label="Path simplify tolerance"><button class="bc-tool" data-path-refine="simplify" type="button">Simplify</button><button class="bc-tool" data-path-refine="reverse" type="button">Reverse</button><button class="bc-tool" data-path-refine="toggle-close" type="button">Close / Open</button><button class="bc-tool" data-path-refine="cleanup" type="button">Normalize</button><label class="bc-tool-label" for="bcPathRound">Smart fillet radius</label><input id="bcPathRound" type="number" min="0" max="200" step="0.5" value="3" style="width:66px" aria-label="Default smart fillet radius in local SVG units"><label class="bc-tool-label" for="bcPathRoundPerCorner">Per-corner radii</label><input id="bcPathRoundPerCorner" type="text" placeholder="e.g. 2, 5, 0" style="width:112px" aria-label="Per-corner radii"><button class="bc-tool" data-path-round-preview type="button">Preview</button><button class="bc-tool" data-path-round type="button">Apply fillet</button><button class="bc-tool" data-path-round-reset type="button">Reset preview</button><span class="bc-tool-label" id="bcPathRoundPreviewState" role="status" aria-live="polite">Select supported closed paths.</span></div>
      <div class="bc-toolbar" role="toolbar" aria-label="Convert stroke to vector geometry"><span class="bc-tool-label">Turn an unfilled stroke into editable filled geometry</span><button class="bc-tool" data-stroke-outline type="button">Expand stroke to path</button></div>
      <div class="bc-toolbar" role="toolbar" aria-label="Boolean geometry"><span class="bc-tool-label">Select two top-level paths</span><button class="bc-tool" data-boolean="unite" type="button">Union</button><button class="bc-tool" data-boolean="subtract" type="button">Subtract</button><button class="bc-tool" data-boolean="intersect" type="button">Intersect</button><button class="bc-tool" data-boolean="exclude" type="button">Exclude</button></div>
     </div>
@@ -406,7 +407,7 @@
     <div class="bc-layer-tools bc-asset-toolbar">
      <input id="bcAssetQuery" type="search" placeholder="Search icons (e.g. play, Dolby, GitHub)" aria-label="Search vector icons">
      <label class="bc-asset-source-label" for="bcAssetSource">Show
-      <select id="bcAssetSource" aria-label="Icon source filter">
+      <select id="bcAssetSource" aria-label="Show All Iconify">
        <option value="all">All</option>
        <option value="iconify">Iconify</option>
        <option value="lucide">Lucide</option>
@@ -434,19 +435,19 @@
      <div class="bc-stage-title"><strong>Artboard</strong><span class="bc-dimension-chip" id="bcDimensions">320 × 90</span></div>
      <div class="bc-stage-settings">
       <div class="bc-stage-control-row">
-       <div class="bc-control-cluster" aria-label="Canvas view settings">
+       <div class="bc-control-cluster">
         <label class="bc-control-check"><input type="checkbox" id="bcChecker" checked> Transparency</label>
         <label class="bc-control-check"><input type="checkbox" id="bcGrid"> Grid</label>
-        <label class="bc-gridcheck">Grid step <input type="number" id="bcGridSize" min="2" max="200" step="1" value="10" aria-label="Grid spacing"></label>
+        <label class="bc-gridcheck">Grid step <input type="number" id="bcGridSize" min="2" max="200" step="1" value="10" aria-label="Grid step"></label>
         <label class="bc-control-check" title="When enabled, dragging aligns the selected layer's origin to the grid. Hold Shift to temporarily bypass snapping."><input type="checkbox" id="bcSnap"> Snap to grid</label>
        </div>
-       <div class="bc-control-cluster bc-zoom-cluster" aria-label="Canvas zoom controls">
+       <div class="bc-control-cluster bc-zoom-cluster">
         <button class="bc-btn" id="bcFit" type="button" title="Fit the complete artboard in the available workspace">Fit view</button>
         <input type="range" id="bcZoom" min="1" max="2000" step="1" value="100" aria-label="Canvas zoom">
         <span id="bcZoomVal" class="bc-zoom-value">100%</span>
        </div>
       </div>
-      <div class="bc-artboard-controls" aria-label="Artboard size and layout">
+      <div class="bc-artboard-controls">
        <div class="bc-artboard-size">
         <label>Width <input type="number" id="bcCanvasW" min="1" max="10000" value="320" aria-label="Artboard width"></label>
         <label>Height <input type="number" id="bcCanvasH" min="1" max="5000" value="90" aria-label="Artboard height"></label>
@@ -458,14 +459,14 @@
         <button class="bc-btn" id="bcFitArtwork" type="button" title="Uniformly shrink or enlarge visible artwork to fill the available artboard area while preserving its proportions and padding">Fit artwork</button>
         <button class="bc-btn" id="bcCenterArtwork" type="button" title="Smart Auto Center detects a shared text row from baseline and visible-ink geometry, optionally matches suitable inline icons to text cap height, and centers the composition. Separate rows are preserved.">Auto center</button>
         <button class="bc-btn" id="bcCommonBaseline" type="button" title="Force selected editable single-line text layers and guided path/SVG labels onto one shared writing baseline, optionally match suitable inline icons to cap height, and center the composition. Use this when labels start far apart vertically.">Common baseline</button>
-        <label class="bc-gridcheck bc-icon-match-option" for="bcAutoMatchIconSize" title="When checked, every detected icon layer or selected icon group is independently resized to the text cap height. When unchecked, icon sizes are preserved while alignment still works."><input type="checkbox" id="bcAutoMatchIconSize" checked aria-label="Resize suitable inline icons to match text height"><span>Match icon size to text</span></label>
-        <div class="bc-icon-vertical-control"><label for="bcIconVerticalAlign">Icon alignment</label><select id="bcIconVerticalAlign" aria-label="Icon vertical alignment" title="Smart centre aligns each icon's visible centre with the text cap-height centre. Baseline aligns each icon's lower visible edge with the text writing line."><option value="center" selected>Smart centre</option><option value="baseline">Baseline</option></select></div>
+        <label class="bc-gridcheck bc-icon-match-option" for="bcAutoMatchIconSize" title="When checked, every detected icon layer or selected icon group is independently resized to the text cap height. When unchecked, icon sizes are preserved while alignment still works."><input type="checkbox" id="bcAutoMatchIconSize" checked aria-label="Match icon size to text"><span>Match icon size to text</span></label>
+        <div class="bc-icon-vertical-control"><label for="bcIconVerticalAlign">Icon alignment</label><select id="bcIconVerticalAlign" aria-label="Icon alignment" title="Smart centre aligns each icon's visible centre with the text cap-height centre. Baseline aligns each icon's lower visible edge with the text writing line."><option value="center" selected>Smart centre</option><option value="baseline">Baseline</option></select></div>
         <button class="bc-btn" id="bcJumpTypography" type="button" title="Jump to the typography and label alignment controls">Text align</button>
        </div>
       </div>
      </div>
     </div>
-    <div class="bc-stage-wrap" id="bcStageWrap" aria-label="Scrollable artboard viewport. The artboard is the white/checkerboard document area; the dark area around it is workspace only."><div class="bc-stage-inner"><svg id="bcStage" class="bc-stage bc-checker" xmlns="http://www.w3.org/2000/svg" width="320" height="90" viewBox="0 0 320 90" role="img" aria-label="Badge composition artboard. Select, move, resize and rotate vector layers."><defs id="bcDefs"></defs><g id="bcCanvasLayers"></g><g id="bcSelection"></g></svg></div></div>
+    <div class="bc-stage-wrap" id="bcStageWrap"><div class="bc-stage-inner"><svg id="bcStage" class="bc-stage bc-checker" xmlns="http://www.w3.org/2000/svg" width="320" height="90" viewBox="0 0 320 90" role="img" tabindex="0" aria-describedby="bcCursor" aria-label="Badge composition artboard. Select, move, resize and rotate vector layers."><defs id="bcDefs"></defs><g id="bcCanvasLayers"></g><g id="bcSelection"></g></svg></div></div>
     <div class="bc-stage-foot"><span id="bcDimensionsFoot">320 × 90 viewBox</span><span id="bcCursor" title="Drag freely by default. Hold Shift while dragging for fine movement and to bypass snapping. Arrow keys move 0.01 unit, Shift + Arrow moves 10 units, and Alt + Arrow moves 0.1 unit. Keyboard nudging always bypasses grid snapping.">Drag freely · Shift for fine drag · Arrow keys to nudge</span><span id="bcEngineStatus">Native SVG engine</span></div>
    </section>
    <section class="bc-panel bc-inspector">
@@ -541,7 +542,7 @@
        <div>
         <span class="bc-align-label">Tidy arrangement</span>
         <div class="bc-align-row"><label class="bc-align-note" for="bcTidyColumns">Grid columns</label><input id="bcTidyColumns" type="number" min="1" max="50" value="3"></div>
-        <div class="bc-align-row" style="margin-top:5px"><label class="bc-align-note" for="bcTidyGapX">Horizontal / vertical gap</label><div class="bc-align-inline"><input id="bcTidyGapX" type="number" min="0" max="10000" value="16" aria-label="Tidy horizontal gap"><input id="bcTidyGapY" type="number" min="0" max="10000" value="16" aria-label="Tidy vertical gap"></div></div>
+        <div class="bc-align-row" style="margin-top:5px"><label class="bc-align-note" for="bcTidyGapX">Horizontal / vertical gap</label><div class="bc-align-inline"><input id="bcTidyGapX" type="number" min="0" max="10000" value="16" aria-label="Horizontal / vertical gap"><input id="bcTidyGapY" type="number" min="0" max="10000" value="16" aria-label="Tidy vertical gap"></div></div>
         <div class="bc-align-inline" style="margin-top:5px"><button class="bc-btn" data-tidy="x" type="button">Tidy row</button><button class="bc-btn" data-tidy="y" type="button">Tidy column</button><button class="bc-btn" data-tidy="grid" type="button">Tidy grid</button></div>
         <div class="bc-align-divider" style="margin:7px 0"></div>
         <span class="bc-align-label">Manual grid cells</span>
@@ -563,7 +564,7 @@
          <span id="e5CanvasStatus" style="color:#8fb8e8;font-size:11px"></span>
         <div class="bc-vweight-control">
          <div class="bc-vweight-label"><label for="bcThicknessBias">Unseen-orientation compensation</label><output id="bcThicknessBiasValue" for="bcThicknessBias">0% (disabled)</output></div>
-         <input id="bcThicknessBias" type="range" min="0" max="5.4" step="0.1" value="0" disabled aria-label="Orientation compensation (disabled in Engine 4.0)">
+         <input id="bcThicknessBias" type="range" min="0" max="5.4" step="0.1" value="0" disabled aria-label="Unseen-orientation compensation (disabled in Engine 4.0)">
          <p>Engine 4.0 uses pure geometric stem-width matching with no guessed orientation prior. This legacy control is shown for reference only and has no effect.</p>
         </div>
         <div class="bc-vweight-calibration" id="bcThicknessCalibrationPanel">
@@ -582,7 +583,7 @@
         <div class="r" style="margin-top:8px">
           <button id="e5Run" class="bc-btn primary" type="button">Match visual weight 5.1</button>
           <button id="e5Download" class="bc-btn" type="button" disabled>Download matched SVG</button>
-          <span id="e5Status" style="color:#8fb8e8;font-size:11px"></span>
+          <span id="e5Status" style="color:#8fb8e8;font-size:11px" role="status" aria-live="polite" aria-atomic="true"></span>
         </div>
         <pre id="e5Report" style="white-space:pre-wrap;font:11px ui-monospace,monospace;background:#0d141c;color:#cfe4ff;border:1px solid #38506a;border-radius:8px;padding:8px;max-height:180px;overflow:auto;margin-top:8px"></pre>
        </div>
