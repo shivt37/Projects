@@ -417,17 +417,18 @@ ${bg?bg+'\n':''}<g transform="${transform}">${path}</g>
     }
   }
   function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);}
+  const CDN_SRI={'https://cdn.jsdelivr.net/npm/paper@0.17.0/dist/paper-core.min.js':'sha384-gEmegBKRT6L+DIqjFe+6tIxhQ7JBbgggu3FMFb3mCDohcT6VmOXNW41bs+JB/Tv/','https://unpkg.com/paper@0.17.0/dist/paper-core.min.js':'sha384-gEmegBKRT6L+DIqjFe+6tIxhQ7JBbgggu3FMFb3mCDohcT6VmOXNW41bs+JB/Tv/','https://cdn.jsdelivr.net/npm/opentype.js@2.0.0/dist/opentype.min.js':'sha384-rZipYyCodoDMAXvm3BS6DXnn3CAyORo9RZ+7OSlLIj1y1YP4KeMFwgKVkO+9W3nB','https://unpkg.com/opentype.js@2.0.0/dist/opentype.min.js':'sha384-rZipYyCodoDMAXvm3BS6DXnn3CAyORo9RZ+7OSlLIj1y1YP4KeMFwgKVkO+9W3nB'};
   let openTypeLoadPromise=null;
   async function ensureOpenType(){
     if(window.opentype)return window.opentype;
     if(openTypeLoadPromise)return openTypeLoadPromise;
     openTypeLoadPromise=(async()=>{
-      const urls=['https://cdn.jsdelivr.net/npm/opentype.js@2.0.0/dist/opentype.min.js','https://unpkg.com/opentype.js@2.0.0/dist/opentype.min.js'];
+      const urls=['js/vendor/opentype.min.js','https://cdn.jsdelivr.net/npm/opentype.js@2.0.0/dist/opentype.min.js','https://unpkg.com/opentype.js@2.0.0/dist/opentype.min.js'];
       let lastError;
       for(const url of urls){
         try{
           await new Promise((resolve,reject)=>{
-            const script=document.createElement('script');script.src=url;script.async=true;
+            const script=document.createElement('script');script.src=url;script.async=true;const sri=CDN_SRI[url];if(sri){script.integrity=sri;script.crossOrigin='anonymous';}
             const timer=setTimeout(()=>{script.remove();reject(new Error('Loading '+new URL(url).hostname+' timed out.'));},6500);
             script.onload=()=>{clearTimeout(timer);window.opentype?resolve():reject(new Error('The script loaded but did not expose OpenType.js.'));};
             script.onerror=()=>{clearTimeout(timer);reject(new Error('Could not load '+new URL(url).hostname));};
@@ -755,12 +756,12 @@ async function presetDbAction(mode,key,value){let last;for(let attempt=0;attempt
   let hbLoadPromise=null;
   async function ensureHarfBuzz(bust){
     if(hbModule)return hbModule;if(hbLoadPromise)return hbLoadPromise;
-    hbLoadPromise=(async()=>{let lastError;for(const url of ['https://esm.sh/harfbuzzjs@1.6.4?bundle','https://cdn.jsdelivr.net/npm/harfbuzzjs@1.6.4/dist/index.mjs']){try{hbModule=await import(url+(bust?((url.includes('?')?'&':'?')+'hbr='+Date.now()):''));return hbModule;}catch(err){lastError=err;}}throw lastError||Error('HarfBuzz module could not be loaded.');})();
+    hbLoadPromise=(async()=>{let lastError;for(const url of ['js/vendor/harfbuzz/index.mjs','https://esm.sh/harfbuzzjs@1.6.4?bundle','https://cdn.jsdelivr.net/npm/harfbuzzjs@1.6.4/dist/index.mjs']){try{hbModule=await import(url+(bust?((url.includes('?')?'&':'?')+'hbr='+Date.now()):''));return hbModule;}catch(err){lastError=err;}}throw lastError||Error('HarfBuzz module could not be loaded.');})();
     try{return await hbLoadPromise;}finally{hbLoadPromise=null;}
   }
   async function ensureBidi(){
     if(bidiModule)return bidiModule;if(bidiLoadPromise)return bidiLoadPromise;
-    bidiLoadPromise=(async()=>{let last;for(const url of ['https://esm.sh/bidi-js@1.1.0?bundle','https://cdn.jsdelivr.net/npm/bidi-js@1.1.0/+esm']){try{const mod=await importWithTimeout(url,6500),factory=mod.default||mod;if(typeof factory!=='function')throw Error('bidi-js factory export was not found');bidiModule=factory();if(typeof bidiModule.getEmbeddingLevels!=='function')throw Error('bidi-js Unicode bidi API is incomplete');return bidiModule;}catch(err){last=err;}}throw last||Error('Unicode Bidirectional Algorithm module could not load.');})();
+    bidiLoadPromise=(async()=>{let last;for(const url of ['js/vendor/bidi-js.esm.js','https://esm.sh/bidi-js@1.1.0?bundle','https://cdn.jsdelivr.net/npm/bidi-js@1.1.0/+esm']){try{const mod=await importWithTimeout(url,6500),factory=mod.default||mod;if(typeof factory!=='function')throw Error('bidi-js factory export was not found');bidiModule=factory();if(typeof bidiModule.getEmbeddingLevels!=='function')throw Error('bidi-js Unicode bidi API is incomplete');return bidiModule;}catch(err){last=err;}}throw last||Error('Unicode Bidirectional Algorithm module could not load.');})();
     try{return await bidiLoadPromise;}catch(err){bidiLoadPromise=null;throw err;}
   }
   function offsetsIndexForBidiCodeUnit(chars,codeUnit){let offset=0;for(let i=0;i<chars.length;i++){if(codeUnit>=offset&&codeUnit<offset+chars[i].length)return i;offset+=chars[i].length;}return-1;}
@@ -933,7 +934,7 @@ async function presetDbAction(mode,key,value){let last;for(let attempt=0;attempt
     if(svgoLoadPromise)return svgoLoadPromise;
     svgoLoadPromise=(async()=>{
       let lastError;
-      for(const url of ['https://cdn.jsdelivr.net/npm/svgo@4.1.0/dist/svgo.browser.js','https://unpkg.com/svgo@4.1.0/dist/svgo.browser.js']){
+      for(const url of ['js/vendor/svgo.browser.js','https://cdn.jsdelivr.net/npm/svgo@4.1.0/dist/svgo.browser.js','https://unpkg.com/svgo@4.1.0/dist/svgo.browser.js']){
         try{const mod=await importWithTimeout(url,6000);if(typeof mod.optimize!=='function')throw Error('SVGO browser bundle does not expose optimize().');svgoModule=mod;return mod;}
         catch(err){lastError=err;}
       }
