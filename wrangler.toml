@@ -14,5 +14,9 @@ binding = "ASSETS"
 run_worker_first = true
 html_handling = "none"
 
-[vars]
-AUTH_ENABLED = "true"
+# No [vars] here on purpose:
+# - AUTH_ENABLED is read from the dashboard (or .dev.vars locally) and defaults to
+#   "true" in code when unset, so a dashboard change is never overwritten by a deploy.
+# - ADMIN_PIN / SESSION_SECRET are secrets, set only via the dashboard or
+#   `wrangler secret put`; deploys never delete or overwrite them.
+# keep_vars = true above preserves any other dashboard-configured variables.

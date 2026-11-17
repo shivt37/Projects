@@ -37,10 +37,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\testing\e2e.ps1
 - External-link projects use their own URL and ignore `slug`/`assetPath`.
 - Icons can be uploaded as SVG, linked by URL, pasted as SVG code, or generated once with the Iconify API. The result is stored in KV.
 
-## PIN
+## PIN and dashboard changes
 
-- Change: `npx wrangler secret put ADMIN_PIN`
-- Disable: set `AUTH_ENABLED=false` in the Cloudflare dashboard (or `.dev.vars` locally)
+- Change PIN: `npx wrangler secret put ADMIN_PIN`, or edit the secret in the Cloudflare dashboard.
+- Disable PIN: set the `AUTH_ENABLED` variable to `false` in the Cloudflare dashboard (or in `.dev.vars` locally). When unset it defaults to `true` in code.
+- `wrangler.toml` declares **no** `[vars]` and no secrets. It has `keep_vars = true`, so dashboard variables are preserved on deploy, and deploys never delete secrets. Editing a secret or `AUTH_ENABLED` in the dashboard will therefore survive future pushes.
 - Rotating `ADMIN_PIN` invalidates existing sessions.
 
 ## Deploy
