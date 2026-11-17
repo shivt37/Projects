@@ -6,7 +6,7 @@ keep_vars = true
 [[kv_namespaces]]
 binding = "GATEWAY"
 # Local development uses a local KV emulation. Replace with the real namespace ID before deploying.
-id = "00000000000000000000000000000000"
+id = "6440ae76eba24c96847425e0583f53d6"
 
 [assets]
 directory = "./public"
