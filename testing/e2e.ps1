@@ -24,7 +24,8 @@ function Header([string]$path, [string]$header, [string]$cookieFile = "") {
   return (curl.exe -s -D - -o NUL "$base$path" | Select-String -Pattern "$header" | Select-Object -First 1).Line
 }
 
-$proc = Start-Process -FilePath "npx.cmd" -ArgumentList "wrangler@latest dev --port 8080 --local" -WorkingDirectory $repo -PassThru -WindowStyle Hidden -RedirectStandardOutput "$env:TEMP\gateway-dev.out.log" -RedirectStandardError "$env:TEMP\gateway-dev.err.log"
+$wrangler = if ($env:WRANGLER_VERSION) { "wrangler@$env:WRANGLER_VERSION" } else { "wrangler@latest" }
+$proc = Start-Process -FilePath "npx.cmd" -ArgumentList "$wrangler dev --port 8080 --local" -WorkingDirectory $repo -PassThru -WindowStyle Hidden -RedirectStandardOutput "$env:TEMP\gateway-dev.out.log" -RedirectStandardError "$env:TEMP\gateway-dev.err.log"
 Start-Sleep -Seconds 30
 
 try {
