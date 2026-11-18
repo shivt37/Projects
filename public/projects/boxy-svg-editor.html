@@ -289,15 +289,17 @@
 (() => {
   "use strict";
 
-  const BOXY_BASE = "https://boxy-svg.com/node_modules/@boxy-svg/boxy-svg/";
+  const BOXY_BASE = location.protocol === "file:"
+    ? "https://boxy-svg.com/node_modules/@boxy-svg/boxy-svg/"
+    : location.origin + "/p/boxy-svg-editor/boxy/";
   const COMPONENT_URL = BOXY_BASE + "boxy-svg.js";
   // Documented component inputs. Set explicitly as absolute URLs so the editor never tries
   // to resolve them against this page (which breaks when the page is opened from file://).
   const ASSETS = {
     logo: BOXY_BASE + "logo.svg",
-    menu: BOXY_BASE + "menus/default.html",
-    locale: BOXY_BASE + "locales/en.ftl",
-    theme: BOXY_BASE + "themes/fluent.css",
+    menus: BOXY_BASE + "menus.html",
+    locales: BOXY_BASE + "locales/en.ftl",
+    themes: BOXY_BASE + "themes/fluent.css",
     icons: BOXY_BASE + "icons/default.svg"
   };
   const STORAGE_KEY = "bx-editor:doc";
@@ -310,9 +312,8 @@
 
   const $ = (id) => document.getElementById(id);
 
-  // The Boxy component reads *every* localStorage entry of this origin and runs JSON.parse
-  // on it, so a raw SVG string in localStorage breaks its start-up. Documents therefore
-  // live in IndexedDB, which the component never touches.
+  // The Boxy component parses bx-/x- localStorage keys as JSON, so documents live in
+  // IndexedDB instead. Unrelated keys such as nbl-theme are ignored by the component.
   const DB_NAME = "bx-editor";
   const DB_STORE = "kv";
   const idbOpen = () => new Promise((resolve, reject) => {
@@ -405,11 +406,13 @@
     for (const b of document.querySelectorAll(".actions .btn")) b.disabled = true;
   };
 
-  const withTimeout = (promise, ms, label) =>
-    Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error(label + " timed out after " + ms / 1000 + "s")), ms))
-    ]);
+  const withTimeout = (promise, ms, label) => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(label + " timed out after " + ms / 1000 + "s")), ms);
+    Promise.resolve(promise).then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
 
   const runtimeErrors = [];
   window.addEventListener("error", (e) => {
@@ -446,6 +449,7 @@
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
+        if (!/^(bx-|x-)/.test(key)) continue;
         const value = localStorage.getItem(key);
         try { nativeParse.call(JSON, value); }
         catch { out.push(key + " = " + String(value).slice(0, 24).replace(/\s+/g, " ") + "…"); }
@@ -602,7 +606,11 @@
   // and gives it back again.
   const waitUntilUsable = async (initialSVG) => {
     if (editor.whenReady && typeof editor.whenReady.then === "function") {
-      await Promise.race([editor.whenReady.catch(() => {}), sleep(8000)]);
+      const ready = await Promise.race([
+        editor.whenReady.then(() => true).catch(() => false),
+        sleep(8000).then(() => false)
+      ]);
+      if (!ready) throw new Error("Boxy iframe never became ready — check frame-ancestors/CSP for this origin");
     }
     const deadline = Date.now() + 40000;
     let lastError = new Error("Editor never accepted a document");

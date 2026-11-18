@@ -1,3 +1,4 @@
+import { proxyBoxy } from "./boxy-proxy.js";
 import { checkSession, isAuthEnabled, loginPageHtml } from "./auth.js";
 import { getConfig } from "./store.js";
 
@@ -39,6 +40,10 @@ export async function handleProject(request, env, slug, subpath) {
         headers: { "content-type": "text/html; charset=utf-8", ...privateHeaders },
       });
     }
+  }
+
+  if (slug === "boxy-svg-editor" && subpath.startsWith("boxy/")) {
+    return proxyBoxy(request, subpath.slice("boxy/".length), Boolean(project.public));
   }
 
   const assetPath = safeAssetPath(project);
