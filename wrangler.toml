@@ -1,4 +1,4 @@
-name = "projects-gateway"
+name = "project"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 keep_vars = true

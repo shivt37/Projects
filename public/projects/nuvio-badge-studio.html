@@ -1038,11 +1038,20 @@ function fillSel(){const gf=$('#gf'),sc=$('#scope'),a=gf.value,b=sc.value;
  document.querySelectorAll('select[data-k=groupId]').forEach(s=>{const f=S.filters[s.dataset.i];if(f)s.innerHTML=gopts(f.groupId)});
  document.querySelectorAll('.gn').forEach(e=>{const f=S.filters[e.dataset.i];if(f)e.textContent=gname(f.groupId)})}
 
+/* Badges always follow the group order: stable sort by the position of their group in S.groups.
+   Badges keep their relative order inside a group; badges whose group is unknown go last, kept together. */
+function sortedFilters(){
+ const rank=new Map();S.groups.forEach((g,i)=>{const id=String(g.id);if(!rank.has(id))rank.set(id,i)});
+ let extra=S.groups.length;
+ const key=f=>{const id=f.groupId==null?'':String(f.groupId);if(!rank.has(id))rank.set(id,extra++);return rank.get(id)};
+ return S.filters.map((f,i)=>({f,i,k:key(f)})).sort((a,b)=>a.k-b.k||a.i-b.i).map(x=>x.f)}
+function syncFilterOrder(){const s=sortedFilters();const changed=s.some((f,j)=>f!==S.filters[j]);if(changed)S.filters.splice(0,S.filters.length,...s);return changed}
 function render(nc){
+ syncFilterOrder();
  $('#cnt').textContent=S.filters.length+' badges · '+S.groups.length+' groups';$('#fn').textContent=fname;
  fillSel();
  $('#group-meta').textContent=S.groups.length+' groups';
- $('#groups').innerHTML=S.groups.map((g,i)=>`<div class="grow" data-group-index="${i}"><label class="group-id-field"><span>Group ID</span><input data-t="g" data-i="${i}" data-k="id" value="${esc(g.id)}" spellcheck="false" autocomplete="off"></label><label class="group-name-field"><span>Name</span><input data-t="g" data-i="${i}" data-k="name" value="${esc(g.name)}"></label><div class="group-actions"><button type="button" class="ib group-move" data-a="gup" data-i="${i}" title="Move group up" aria-label="Move ${esc(g.name||g.id)} up" ${i===0?'disabled':''}>↑</button><button type="button" class="ib group-move" data-a="gdown" data-i="${i}" title="Move group down" aria-label="Move ${esc(g.name||g.id)} down" ${i===S.groups.length-1?'disabled':''}>↓</button><button type="button" class="sm group-bulk" data-a="gbulk" data-i="${i}" title="Bulk edit badges in this group">Bulk edit</button><button type="button" class="sm group-delete" data-a="gdel" data-i="${i}" title="Delete group">Remove</button></div></div>`).join('');
+ $('#groups').innerHTML=S.groups.map((g,i)=>`<div class="grow" data-group-index="${i}"><label class="group-id-field"><span>Group ID</span><input data-t="g" data-i="${i}" data-k="id" value="${esc(g.id)}" spellcheck="false" autocomplete="off"></label><label class="group-name-field"><span>Name</span><input data-t="g" data-i="${i}" data-k="name" value="${esc(g.name)}"></label><div class="group-actions"><button type="button" class="ib group-move" data-a="gup" data-i="${i}" title="Move group up (its badges move with it)" aria-label="Move ${esc(g.name||g.id)} up" ${i===0?'disabled':''}>↑</button><button type="button" class="ib group-move" data-a="gdown" data-i="${i}" title="Move group down (its badges move with it)" aria-label="Move ${esc(g.name||g.id)} down" ${i===S.groups.length-1?'disabled':''}>↓</button><button type="button" class="sm group-bulk" data-a="gbulk" data-i="${i}" title="Bulk edit badges in this group">Bulk edit</button><button type="button" class="sm group-delete" data-a="gdel" data-i="${i}" title="Delete group">Remove</button></div></div>`).join('');
  const gf=$('#gf').value,L=$('#list'),q=$('#q').value.toLowerCase();L.innerHTML='';
  if(!S.filters.length)L.innerHTML='<div class="empty">Drop a Nuvio / Fusion badge <b>.json</b> here, or use <b>Open</b> / <b>Link</b>.<br>Or press <b>New</b> to start from scratch.</div>';
  S.filters.forEach((f,i)=>{if(gf&&f.groupId!==gf)return;if(q&&!(f.name+' '+f.id+' '+f.pattern).toLowerCase().includes(q))return;
@@ -1098,7 +1107,7 @@ $('#list').addEventListener('change',e=>{const s=e.target;if(s.dataset.pre===und
  const f=S.filters[s.dataset.pre];ap(f,s.value);OP.add(f);render();toast('Preset applied')});
 $('#list').addEventListener('focusout',e=>{const el=e.target;if(el.dataset.k==='imageURL'&&el.dataset.t==='f'){const f=S.filters[+el.dataset.i];if(f&&isSvgUrl(f.imageURL))embedOneFilter(f)}});
 
-function nb(i,d){const gf=$('#gf').value;for(let j=i+d;j>=0&&j<S.filters.length;j+=d)if(!gf||S.filters[j].groupId===gf)return j;return -1}
+function nb(i,d){const g=S.filters[i].groupId;for(let j=i+d;j>=0&&j<S.filters.length;j+=d)if(S.filters[j].groupId===g)return j;return -1}
 const uid=b=>{const ids=new Set(S.filters.map(f=>f.id));let x=b,k=2;while(ids.has(x))x=b+'-'+k++;return x};
 $('#list').addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b)return;e.preventDefault();
  const i=+b.dataset.i,a=b.dataset.a,F=S.filters;
@@ -1108,7 +1117,7 @@ $('#list').addEventListener('click',e=>{const b=e.target.closest('button[data-a]
  render()});
 $('#groups').addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b)return;
  const i=+b.dataset.i,a=b.dataset.a,g=S.groups[i];if(!g)return;
- if(a==='gup'||a==='gdown'){const j=i+(a==='gup'?-1:1);if(j<0||j>=S.groups.length)return;[S.groups[i],S.groups[j]]=[S.groups[j],S.groups[i]];render();return}
+ if(a==='gup'||a==='gdown'){const j=i+(a==='gup'?-1:1);if(j<0||j>=S.groups.length)return;[S.groups[i],S.groups[j]]=[S.groups[j],S.groups[i]];const moved=syncFilterOrder();render();if(moved)toast('Group moved · its badges moved with it');return}
  if(a==='gdel'){if(S.filters.some(f=>f.groupId===g.id))return alert('"'+g.name+'" still has badges. Move or delete them first.');
   if(confirm('Delete group "'+g.name+'"?')){S.groups.splice(i,1);render()}}});
 $('#gadd').onclick=()=>{const n=prompt('Group name?');if(!n||!n.trim())return;const base='g-'+n.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');const ids=new Set(S.groups.map(g=>g.id));let id=base||'group',k=2;while(ids.has(id))id=base+'-'+k++;
@@ -1131,7 +1140,7 @@ async function load(txt,name){
  const fixColor=v=>typeof v==='string'?v.replace(/^#{2,}/,'#'):v;
  filters.forEach(f=>['tagColor','borderColor','textColor'].forEach(k=>{if(f[k]!=null)f[k]=fixColor(f[k])}));
  const seq=++LOAD_SEQ;
- S={filters,groups,extra,hg:Array.isArray(d.groups)};fname=name||fname;
+ S={filters,groups,extra,hg:Array.isArray(d.groups)};fname=name||fname;const reordered=syncFilterOrder();
  $('#gf').value='';resetHistory();render();
  IMPORT_EMBEDDING=true;$('#dl').disabled=true;$('#cp').disabled=true;updateGlobalSvgUI();
  const setup=$('#setup');if(setup)setup.textContent='Checking SVG artwork and embedding hosted SVGs…';
@@ -1142,7 +1151,7 @@ async function load(txt,name){
   const parts=[];if(stats.embedded)parts.push(stats.embedded+' SVG'+(stats.embedded===1?'':'s')+' embedded');
   if(stats.recolored)parts.push(stats.recolored+' artwork recolored');
   if(stats.failed)parts.push(stats.failed+' SVG'+(stats.failed===1?'':'s')+' kept as original URL/data');
-  toast('Loaded '+filters.length+' badges'+(groups.length?' · '+groups.length+' groups':'')+(parts.length?' · '+parts.join(' · '):''));
+  toast('Loaded '+filters.length+' badges'+(groups.length?' · '+groups.length+' groups':'')+(reordered?' · reordered to match group order':'')+(parts.length?' · '+parts.join(' · '):''));
   if(stats.failed&&setup)setup.textContent=`${stats.failed} SVG image(s) could not be embedded. Their original imageURL values were kept; check each badge's image status.`;
  }catch(e){if(seq===LOAD_SEQ)toast('Loaded JSON, but SVG processing stopped: '+e.message)}
  finally{if(seq===LOAD_SEQ){IMPORT_EMBEDDING=false;$('#dl').disabled=false;$('#cp').disabled=false;setupNote();updateGlobalSvgUI()}}
@@ -1257,7 +1266,7 @@ addEventListener('drop',e=>{e.preventDefault();clearSvgDrop();{const files=[...e
 function out(){const clean=v=>typeof v==='string'?v.trim().replace(/^#+/,'#'):v;
  const groups=S.groups.map(groupRecord);
  const filterKeys=['id','groupId','name','pattern','imageURL','isEnabled','tagColor','tagStyle','textColor','borderColor'];
- const filters=S.filters.map(f=>{const x={};filterKeys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(f,k))x[k]=clean(f[k])});Object.keys(f).forEach(k=>{if(!filterKeys.includes(k)&&k!=='type')x[k]=f[k]});return x});
+ const filters=sortedFilters().map(f=>{const x={};filterKeys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(f,k))x[k]=clean(f[k])});Object.keys(f).forEach(k=>{if(!filterKeys.includes(k)&&k!=='type')x[k]=f[k]});return x});
  const o={groups,filters};Object.keys(S.extra||{}).forEach(k=>{if(k!=='groups'&&k!=='filters')o[k]=S.extra[k]});return JSON.stringify(o,null,2)}
 function scanHealth(){
  const issues=[],filterIds=new Map(),groupIds=new Map(),validGroups=new Set(S.groups.map(g=>String(g.id||'').trim()).filter(Boolean));
