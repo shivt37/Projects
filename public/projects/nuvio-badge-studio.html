@@ -734,6 +734,9 @@ button.ib{width:29px;height:29px}
 .bulk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .bulk-field input,.bulk-field select{width:100%;min-width:0}
 .bulk-svg{grid-column:1/-1}
+.alpha-row{display:flex;align-items:center;gap:9px;min-width:0;margin-top:1px}
+.alpha-row input[type=range]{flex:1;min-width:0;width:100%;padding:0}
+.alpha-row .pct{width:36px;flex:none;text-align:right;font:10px var(--mono);color:var(--muted)}
 .group-actions .group-bulk{height:29px;padding:0 8px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 25%,var(--border));font-size:10px}
 .group-actions .group-bulk:hover{background:var(--accent-soft)}
 @media(max-width:760px){.modal-card{padding:15px;max-height:92dvh}.modal-foot{align-items:stretch;flex-direction:column}.modal-foot>.hint{max-width:none}.modal-buttons{justify-content:flex-end}.health-stats{gap:5px}.health-stat{padding:8px}.health-stat b{font-size:17px}.health-item{grid-template-columns:55px minmax(0,1fr)}.bulk-grid{grid-template-columns:1fr 1fr;gap:9px}.grow .group-actions{grid-column:1/-1;justify-content:flex-end}.group-actions .group-bulk{font-size:9.5px;padding:0 7px}}
@@ -963,9 +966,9 @@ button.ib{width:29px;height:29px}
     <div class="bulk-grid">
       <label class="bulk-field"><span>Enabled state</span><select id="bulk-enabled"><option value="keep">Do not change</option><option value="enable">Enable all</option><option value="disable">Disable all</option></select></label>
       <label class="bulk-field"><span>Tag style</span><select id="bulk-style"><option value="">Do not change</option><option value="filled">Filled</option><option value="bordered">Bordered</option><option value="filled and bordered">Filled and bordered</option></select></label>
-      <label class="bulk-field"><span>Fill color · ARGB</span><input id="bulk-fill" type="text" placeholder="#CCFFFFFF" spellcheck="false"></label>
-      <label class="bulk-field"><span>Border color · ARGB</span><input id="bulk-border" type="text" placeholder="#80FFFFFF" spellcheck="false"></label>
-      <label class="bulk-field bulk-svg"><span>SVG artwork color · ARGB</span><input id="bulk-svg" type="text" placeholder="#FFFFFFFF" spellcheck="false"><small>Only SVG badges are recolored. Raster images are unchanged.</small></label>
+      <label class="bulk-field"><span>Fill color · ARGB</span><input id="bulk-fill" type="text" placeholder="#CCFFFFFF" spellcheck="false"><span class="alpha-row"><input id="bulk-fill-alpha" type="range" min="0" max="255" step="1" value="255" aria-label="Fill opacity"><span class="pct" id="bulk-fill-alpha-val">100%</span></span></label>
+      <label class="bulk-field"><span>Border color · ARGB</span><input id="bulk-border" type="text" placeholder="#80FFFFFF" spellcheck="false"><span class="alpha-row"><input id="bulk-border-alpha" type="range" min="0" max="255" step="1" value="255" aria-label="Border opacity"><span class="pct" id="bulk-border-alpha-val">100%</span></span></label>
+      <label class="bulk-field bulk-svg"><span>SVG artwork color · ARGB</span><input id="bulk-svg" type="text" placeholder="#FFFFFFFF" spellcheck="false"><span class="alpha-row"><input id="bulk-svg-alpha" type="range" min="0" max="255" step="1" value="255" aria-label="SVG artwork opacity"><span class="pct" id="bulk-svg-alpha-val">100%</span></span><small>Only SVG badges are recolored. Raster images are unchanged.</small></label>
     </div>
     <div class="modal-foot"><span class="hint" id="bulk-status">Leave a field blank to keep that property unchanged.</span><div class="modal-buttons"><button type="button" data-modal-close="bulk">Cancel</button><button class="pri" type="button" id="bulk-apply">Apply to group</button></div></div>
   </section>
@@ -1071,7 +1074,48 @@ function scPalette(f,key){
   const sf=th==='D'?scLighten(R.sD,stage,3.4):scMix(R.sL,'#000000',[0,.05,.10,.15,.20][s]);
   return{tagColor:scA(sf,'FF'),borderColor:scA(th==='L'?scMix(accent,'#000000',.45):T.ink,'FF'),textColor:'#FFFFFFFF',tagStyle:'filled'};
 }
-const PN={original:'Original (imported)',glass:'Liquid Glass - clear',tint:'Liquid Glass - accent tint',smoked:'Liquid Glass - smoked',outline:'Outline only',solid:'Solid dark',light:'Solid light (for dark glyphs)',inkline:'Studio - Inkline',porcelain:'Studio - Porcelain',noir:'Studio - Noir Glass',signal:'Studio - Signal'};
+const NX_MAP={qua:'CORE',enc:'CORE',res:'LIGHT',vis:'LIGHT',dvp:'LIGHT',aud:'SOUND',cha:'SOUND',spc:'PRESTIGE',edi:'PRESTIGE',enh:'PRESTIGE',str:'ORIGIN',deb:'ORIGIN',rel:'META',fmt:'META',ctr:'META',sub:'META',lang:'META'};
+const NX={
+ CORE:{L:['F1ECFB','8B6FD6','4C2A8A'],D:['1E1730','9B7FE0','D6C6FF']},
+ LIGHT:{L:['E6F6FC','2F7F99','155E75'],D:['0E2731','5CC4DD','A6EAF7']},
+ SOUND:{L:['E4F7EE','2F9C70','146B4A'],D:['0E2A20','5ED0A0','A6F0D0']},
+ PRESTIGE:{L:['FDECF3','B15879','8A2C57'],D:['2E1624','E694B6','FFC9DF']},
+ ORIGIN:{L:['FEF3DF','996C17','7A5206'],D:['2B2110','DDB05E','F7DDA6']},
+ META:{L:['EDF0FB','5F6DA8','35417A'],D:['171B2E','8F9BD4','C4CBF5']}
+};
+const NX_COVET={
+ CORE:{L:['4C2A86','8A6E33','FFF6E8'],D:['2A1D4A','D8BE86','F0E4FF']},
+ LIGHT:{L:['17458C','8A6E33','FFF6E8'],D:['142A55','D8BE86','E4EEFF']},
+ SOUND:{L:['115E4A','8A6E33','FFF6E8'],D:['0C3A2C','D8BE86','DFF7EC']},
+ PRESTIGE:{L:['8A2140','8A6E33','FFF6E8'],D:['481327','D8BE86','FFE4EE']},
+ ORIGIN:{L:['7A5206','8A6E33','FFF6E8'],D:['3B2A0C','D8BE86','FFF0CF']},
+ META:{L:['2B3340','8A6E33','FFF6E8'],D:['20242E','D8BE86','E8ECF5']}
+};
+const NX_PRISM={
+ CORE:{L:['DCCBFF','7C3AED','2E1065'],D:['2E1A5E','A78BFA','E9D5FF']},
+ LIGHT:{L:['BFEAF7','0284C7','0C4A6E'],D:['083344','38BDF8','BAE6FD']},
+ SOUND:{L:['C6F0D5','059669','064E3B'],D:['052E24','34D399','A7F3D0']},
+ PRESTIGE:{L:['FBCFE8','DB2777','831843'],D:['4A1236','F472B6','FBCFE8']},
+ ORIGIN:{L:['FDE68A','B85F04','78350F'],D:['3B2606','FBBF24','FDE68A']},
+ META:{L:['DCE3F2','475569','1E293B'],D:['1E293B','94A3B8','E2E8F0']}
+};
+function nxFill(base,border,th,t,sys){
+ const surf=th==='D'?'#08090A':'#FFFFFF';
+ if(sys==='lumen')return th==='D'?[scMix(base,surf,.50),scMix(base,surf,.26),base,base,scMix(base,border,.10),scMix(base,border,.20)][t]:[scMix(base,'#FFFFFF',.55),scMix(base,'#FFFFFF',.30),base,scMix(base,border,.12),scMix(base,border,.22)][t];
+ if(sys==='covet')return th==='D'?[scMix(base,surf,.34),scMix(base,surf,.17),base,scMix(base,'#FFFFFF',.05),scMix(base,'#FFFFFF',.10)][t]:[scMix(base,'#FFFFFF',.14),scMix(base,'#FFFFFF',.07),base,scMix(base,'#000000',.06),scMix(base,'#000000',.12)][t];
+ return th==='D'?[scMix(base,surf,.42),scMix(base,surf,.22),base,scMix(base,border,.10),scMix(base,border,.18)][t]:[scMix(base,'#FFFFFF',.45),scMix(base,'#FFFFFF',.24),base,scMix(base,border,.12),scMix(base,border,.22)][t];
+}
+function nxPalette(f,key){
+ const th=document.documentElement.dataset.theme==='light'?'L':'D';
+ const id=String(f.id||'').replace(/^[sp]-/,''),m=SC_META[id];
+ const t=m?Math.max(0,Math.min(4,m.t)):Math.min(4,Math.max(0,S.filters.indexOf(f)))%5;
+ const role=NX_MAP[String(f.groupId||'')]||'META';
+ const table=key==='covet'?NX_COVET:key==='prism'?NX_PRISM:NX;
+ const a=table[role][th],base='#'+a[0],border='#'+a[1],text='#'+a[2];
+ const fill=nxFill(base,border,th,t,key);
+ return{tagColor:scA(fill,'FF'),borderColor:scA(border,'FF'),textColor:scA(text,'FF'),tagStyle:'filled'};
+}
+const PN={original:'Original (imported)',glass:'Liquid Glass - clear',tint:'Liquid Glass - accent tint',smoked:'Liquid Glass - smoked',outline:'Outline only',solid:'Solid dark',light:'Solid light (for dark glyphs)',inkline:'Studio - Inkline',porcelain:'Studio - Porcelain',noir:'Studio - Noir Glass',signal:'Studio - Signal',lumen:'Studio - Lumen',covet:'Studio - Covet',prism:'Studio - Prism'};
 const PO=Object.keys(PN).map(k=>`<option value="${k}">${PN[k]}</option>`).join('');
 const PRE={
  glass:()=>({tagColor:'#33FFFFFF',borderColor:'#80FFFFFF',tagStyle:'filled'}),
@@ -1083,7 +1127,7 @@ const PRE={
  inkline:f=>scPalette(f,'inkline'),
  porcelain:f=>scPalette(f,'porcelain'),
  noir:f=>scPalette(f,'noir'),
- signal:f=>scPalette(f,'signal'),original:f=>{const id=String(f.id||'').replace(/^[sp]-/,''),o=(S.extra&&S.extra._originalStyles&&S.extra._originalStyles[id])||{tagColor:f.tagColor,borderColor:f.borderColor,textColor:f.textColor,tagStyle:f.tagStyle,imageURL:f.imageURL};return{tagColor:o.tagColor,borderColor:o.borderColor,textColor:o.textColor,tagStyle:o.tagStyle,imageURL:o.imageURL}}};
+ signal:f=>scPalette(f,'signal'),original:f=>{const id=String(f.id||'').replace(/^[sp]-/,''),o=(S.extra&&S.extra._originalStyles&&S.extra._originalStyles[id])||{tagColor:f.tagColor,borderColor:f.borderColor,textColor:f.textColor,tagStyle:f.tagStyle,imageURL:f.imageURL};return{tagColor:o.tagColor,borderColor:o.borderColor,textColor:o.textColor,tagStyle:o.tagStyle,imageURL:o.imageURL}},lumen:f=>nxPalette(f,'lumen'),covet:f=>nxPalette(f,'covet'),prism:f=>nxPalette(f,'prism')};
 
 function fillSel(){const gf=$('#gf'),sc=$('#scope'),a=gf.value,b=sc.value;
  gf.innerHTML='<option value="">All groups</option>'+gopts('');
@@ -1293,21 +1337,39 @@ $('#merge-apply').onclick=async()=>{
 $('#merge-modal').addEventListener('click',e=>{if(e.target.matches('[data-modal-close="merge"]')||e.target===$('#merge-modal'))closeModal('merge')});
 
 // Group-level bulk editing applies directly to the group's filters, never to the group JSON record.
-function openBulk(groupId){const sel=$('#bulk-group');sel.innerHTML=S.groups.map(g=>`<option value="${esc(g.id)}">${esc(g.name||g.id)} · ${S.filters.filter(f=>f.groupId===g.id).length}</option>`).join('');if(!S.groups.length){toast('Create a group first');return}sel.value=groupId||S.groups[0].id;$('#bulk-enabled').value='keep';$('#bulk-style').value='';$('#bulk-fill').value='';$('#bulk-border').value='';$('#bulk-svg').value='';$('#bulk-subtitle').textContent='Apply one or more changes to every badge in '+gname(sel.value)+'.';$('#bulk-modal').classList.add('show');$('#bulk-modal').setAttribute('aria-hidden','false')}
+function openBulk(groupId){const sel=$('#bulk-group');sel.innerHTML=S.groups.map(g=>`<option value="${esc(g.id)}">${esc(g.name||g.id)} · ${S.filters.filter(f=>f.groupId===g.id).length}</option>`).join('');if(!S.groups.length){toast('Create a group first');return}sel.value=groupId||S.groups[0].id;$('#bulk-enabled').value='keep';$('#bulk-style').value='';$('#bulk-fill').value='';$('#bulk-border').value='';$('#bulk-svg').value='';['fill','border','svg'].forEach(k=>{const sl=$('#bulk-'+k+'-alpha'),lab=$('#bulk-'+k+'-alpha-val');const vals=S.filters.filter(f=>String(f.groupId||'')===sel.value).map(f=>parse(k==='fill'?f.tagColor:k==='border'?f.borderColor:f.textColor)).filter(p=>!p.bad).map(p=>p.a);const same=vals.length>0&&vals.every(a=>a===vals[0]);const a=same?vals[0]:255;sl.value=a;lab.textContent=same?Math.round(a/2.55)+'%':'100%';sl.dataset.touched=''});$('#bulk-subtitle').textContent='Apply one or more changes to every badge in '+gname(sel.value)+'.';$('#bulk-modal').classList.add('show');$('#bulk-modal').setAttribute('aria-hidden','false')}
 $('#groups').addEventListener('click',e=>{const b=e.target.closest('button[data-a="gbulk"]');if(b){e.preventDefault();openBulk(S.groups[+b.dataset.i]?.id)}});
 $('#bulk-group').addEventListener('change',e=>$('#bulk-subtitle').textContent='Apply one or more changes to every badge in '+gname(e.target.value)+'.');
+['fill','border','svg'].forEach(k=>{
+ const sl=$('#bulk-'+k+'-alpha'),lab=$('#bulk-'+k+'-alpha-val'),hex=$('#bulk-'+k);
+ sl.addEventListener('input',()=>{lab.textContent=Math.round(+sl.value/2.55)+'%';sl.dataset.touched='1'});
+ hex.addEventListener('input',()=>{const p=parse(hex.value);if(!p.bad){sl.value=p.a;lab.textContent=Math.round(p.a/2.55)+'%'}});
+});
 $('#bulk-apply').onclick=async()=>{
  const gid=$('#bulk-group').value,targets=S.filters.filter(f=>String(f.groupId||'')===gid);if(!targets.length){toast('This group has no badges');return}
  const enabled=$('#bulk-enabled').value,style=$('#bulk-style').value,fill=$('#bulk-fill').value.trim(),border=$('#bulk-border').value.trim(),svg=$('#bulk-svg').value.trim();
  if(fill&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(fill)){$('#bulk-fill').style.borderColor='#F16A6A';toast('Invalid fill color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-fill').style.borderColor='';
  if(border&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(border)){$('#bulk-border').style.borderColor='#F16A6A';toast('Invalid border color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-border').style.borderColor='';
  if(svg&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(svg)){$('#bulk-svg').style.borderColor='#F16A6A';toast('Invalid SVG color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-svg').style.borderColor='';
- let changed=0;targets.forEach(f=>{let c=false;if(enabled==='enable'&&f.isEnabled===false){f.isEnabled=true;c=true}else if(enabled==='disable'&&f.isEnabled!==false){f.isEnabled=false;c=true}if(style&&f.tagStyle!==style){f.tagStyle=style;c=true}if(fill&&f.tagColor!==fill){f.tagColor=fill;c=true}if(border&&f.borderColor!==border){f.borderColor=border;c=true}if(c)changed++});
- const svgTargets=svg?targets.filter(isSvgFilter):[];if(svg){targets.filter(isSvgFilter).forEach(f=>{if(f.textColor!==svg){f.textColor=svg;changed++}})}
- if(!changed){toast('No changes to apply');return}
- closeModal('bulk');render();
- if(svgTargets.length){const seq=++LOAD_SEQ;IMPORT_EMBEDDING=true;$('#dl').disabled=true;$('#cp').disabled=true;try{const st=await processImportedSvgs(svgTargets,seq);if(seq===LOAD_SEQ){render();commit();toast('Bulk edit applied · '+svgTargets.length+' SVG artwork color(s) processed'+(st.failed?' · '+st.failed+' original URL(s) retained':''))}}finally{if(seq===LOAD_SEQ){IMPORT_EMBEDDING=false;$('#dl').disabled=false;$('#cp').disabled=false;updateGlobalSvgUI()}}}
- else toast('Updated '+targets.length+' badge(s) in '+gname(gid));
+  const withA=(v,a)=>{if(a===null||!v)return v;const p=parse(v);return p.bad?v:mk(p.rgb,a)};
+  const sl=k=>$('#bulk-'+k+'-alpha');
+  const fa=sl('fill').dataset.touched?+sl('fill').value:null;
+  const ba=sl('border').dataset.touched?+sl('border').value:null;
+  const sa=sl('svg').dataset.touched?+sl('svg').value:null;
+  let changed=0;const svgTargets=[];
+  targets.forEach(f=>{
+   let c=false;
+   if(enabled==='enable'&&f.isEnabled===false){f.isEnabled=true;c=true}else if(enabled==='disable'&&f.isEnabled!==false){f.isEnabled=false;c=true}
+   if(style&&f.tagStyle!==style){f.tagStyle=style;c=true}
+   let nf=fill||f.tagColor;if(fa!==null)nf=withA(nf,fa);if(nf&&nf!==f.tagColor){f.tagColor=nf;c=true}
+   let nb=border||f.borderColor;if(ba!==null)nb=withA(nb,ba);if(nb&&nb!==f.borderColor){f.borderColor=nb;c=true}
+   let ns=svg||f.textColor;if(sa!==null)ns=withA(ns,sa);if(ns&&ns!==f.textColor){f.textColor=ns;c=true;if(isSvgFilter(f))svgTargets.push(f)}
+   if(c)changed++;
+  });
+  if(!changed){toast('No changes to apply');return}
+  closeModal('bulk');render();
+  if(svgTargets.length){const seq=++LOAD_SEQ;IMPORT_EMBEDDING=true;$('#dl').disabled=true;$('#cp').disabled=true;try{const st=await processImportedSvgs(svgTargets,seq);if(seq===LOAD_SEQ){render();commit();toast('Bulk edit applied · '+svgTargets.length+' SVG artwork color(s) processed'+(st.failed?' · '+st.failed+' original URL(s) retained':''))}}finally{if(seq===LOAD_SEQ){IMPORT_EMBEDDING=false;$('#dl').disabled=false;$('#cp').disabled=false;updateGlobalSvgUI()}}}
+  else {commit();toast('Updated '+targets.length+' badge(s) in '+gname(gid))}
 };
 $('#bulk-modal').addEventListener('click',e=>{if(e.target.matches('[data-modal-close="bulk"]')||e.target===$('#bulk-modal'))closeModal('bulk')});
 addEventListener('keydown',e=>{if(e.key==='Escape'){['health','merge','bulk','gist'].forEach(closeModal)}});
