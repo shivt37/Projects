@@ -1115,9 +1115,48 @@ function nxPalette(f,key){
  const fill=nxFill(base,border,th,t,key);
  return{tagColor:scA(fill,'FF'),borderColor:scA(border,'FF'),textColor:scA(text,'FF'),tagStyle:'filled'};
 }
-const PN={original:'Original (imported)',glass:'Liquid Glass - clear',tint:'Liquid Glass - accent tint',smoked:'Liquid Glass - smoked',outline:'Outline only',solid:'Solid dark',light:'Solid light (for dark glyphs)',inkline:'Studio - Inkline',porcelain:'Studio - Porcelain',noir:'Studio - Noir Glass',signal:'Studio - Signal',lumen:'Studio - Lumen',covet:'Studio - Covet',prism:'Studio - Prism'};
+const FIVE_TONE={
+ H1:{D:'0B6E4F',M:'12A37A',S:'E6F6EF',N:'12332A',P:'6EE7B7'},
+ H2:{D:'1D4ED8',M:'3B6FE0',S:'E8EFFC',N:'14233F',P:'93C5FD'},
+ H3:{D:'0E7490',M:'12A0BE',S:'E4F4F8',N:'0E2D36',P:'67E8F9'},
+ H4:{D:'6D28D9',M:'8B5CF6',S:'F0EAFE',N:'241A3F',P:'C4B5FD'},
+ H5:{D:'92400E',M:'C2771A',S:'FDF3E3',N:'3A2A12',P:'FDE68A'},
+ H6:{D:'C2410C',M:'E2602C',S:'FDF0E8',N:'3B2418',P:'FDBA74'},
+ H7:{D:'9D174D',M:'D63470',S:'FCEBF3',N:'3A1B2B',P:'F9A8D4'},
+ H8:{D:'334155',M:'64748B',S:'EEF2F6',N:'1D2430',P:'CBD5E1'}
+};
+const FIVE_GMAP={qua:'H1',enc:'H2',res:'H3',vis:'H4',spc:'H7',aud:'H1',cha:'H3',edi:'H5',rel:'H6',fmt:'H5',ctr:'H8',str:'H2',deb:'H8',sub:'H4',lang:'H7',dvp:'H3',enh:'H6'};
+const FIVE_COMP={H1:'H6',H6:'H1',H2:'H5',H5:'H2',H3:'H7',H7:'H3',H4:'H8',H8:'H4'};
+const scComp=(h,surf)=>{let s=String(h).replace('#','');const a=s.length===8?parseInt(s.slice(0,2),16)/255:1,c=scRgb(s.slice(-6)),b=scRgb(surf);return c.map((v,i)=>v*a+b[i]*(1-a));};
+const scLumC=c=>scLum(scHex(c[0],c[1],c[2]));
+function scFit(hue,fill,surf,target,surfTarget){
+ const c=scComp(fill,surf),ch=scHex(c[0],c[1],c[2]),hh=scHex(...scRgb(hue));
+  const fs=scContrast(ch,'#'+surf);
+  const ok=v=>scContrast(v,ch)>=target&&(!surfTarget||fs>=surfTarget||scContrast(v,'#'+surf)>=surfTarget);
+  if(ok(hh))return String(hue).replace('#','');
+  const lc=scLum(ch),lh=scLum(hh),first=lh>lc?'000000':'FFFFFF',second=first==='000000'?'FFFFFF':'000000';
+  for(const dir of [first,second])for(let i=1;i<=10;i++){const cand=scMix(hue,'#'+dir,i/10);if(ok(cand))return cand.replace('#','');}
+  for(let i=0;i<=20;i++){const cand=scMix('#000000','#FFFFFF',i/20);if(ok(cand))return cand.replace('#','');}
+  return lc>.18?'000000':'FFFFFF';
+}
+function fivePalette(f,key){
+ const th=document.documentElement.dataset.theme==='light'?'L':'D';
+ const fam=FIVE_GMAP[String(f.groupId||'')]||'H8',C=FIVE_TONE[fam],CP=FIVE_TONE[FIVE_COMP[fam]];
+ const id=String(f.id||'').replace(/^[sp]-/,''),m=SC_META[id];
+ const t=m?Math.max(0,Math.min(4,m.t)):Math.min(4,Math.max(0,S.filters.indexOf(f)))%5;
+  const surf=th==='L'?'F4F4F5':'17171B',paper=th==='L'?'FBF8F1':'1B1D21',accent=th==='L'?C.D:C.P;
+  const fp=(name,fill,border,text,style)=>({tagColor:fill,borderColor:border,textColor:text,tagStyle:style||'filled'});
+  const fit=(hue,fill,target,st)=>scA(scFit(hue,fill,surf,target,st),'FF');
+  if(key==='manuscript'){const fill=scA(paper,'FF'),b=fit(scMix('#'+paper,'#'+accent,[.75,.82,.89,.95,1][t]),fill,3,3),tx=fit('#'+accent,fill,4.8);return fp('manuscript',fill,b,tx);}
+  if(key==='vitrail'){const va=['CC','D9','E6','F2','FF'][t],vf=th==='L'?(t>=3?scMix('#'+C.M,'#000000',[0,0,0,.35,.5][t]):C.M):C.P,fill=scA(vf,va),b=fit('#'+accent,fill,3,3),tx=fit(th==='L'?'#000000':'#FFFFFF',fill,4.8);return fp('vitrail',fill,b,tx);}
+  if(key==='counterpoint'){const cf=th==='L'?scMix('#'+C.S,'#'+C.M,[0,.25,.5,.75,1][t]):scMix('#'+C.N,'#'+C.M,[0,.15,.3,.5,.7][t]),fill=scA(cf,'FF'),ch='#'+(th==='L'?CP.D:CP.P),b=fit(ch,fill,3,3),tx=fit(ch,fill,4.8);return fp('counterpoint',fill,b,tx,t===4?'filled':'bordered');}
+  if(key==='strata'){const sf=th==='L'?[C.S,scMix('#'+C.S,'#'+C.M,.55),scMix('#'+C.S,'#'+C.M,.82),C.M,C.D][t]:[C.N,scMix('#'+C.N,'#'+C.M,.45),C.M,C.P,C.P][t],sa=th==='L'?['FF','5C','8F','C7','FF'][t]:['FF','66','B3','B3','FF'][t],fill=scA(sf,sa),b=fit('#'+accent,fill,3,3),tx=fit('#'+accent,fill,4.8);return fp('strata',fill,b,tx);}
+  const fill=scA(C.M,['33','3D','4D','66','80'][t]),b=fit('#'+accent,fill,3,3),tx=fit(th==='L'?'#000000':'#FFFFFF',fill,4.8);return fp('aperture',fill,b,tx,'bordered');
+}
+const PN={original:'Original (imported)',glass:'Liquid Glass - clear',tint:'Liquid Glass - accent tint',smoked:'Liquid Glass - smoked',outline:'Outline only',solid:'Solid dark',light:'Solid light (for dark glyphs)',inkline:'Studio - Inkline',porcelain:'Studio - Porcelain',noir:'Studio - Noir Glass',signal:'Studio - Signal',lumen:'Studio - Lumen',covet:'Studio - Covet',prism:'Studio - Prism',manuscript:'Studio - Manuscript',vitrail:'Studio - Vitrail',counterpoint:'Studio - Counterpoint',strata:'Studio - Strata',aperture:'Studio - Aperture'};
 const PO=Object.keys(PN).map(k=>`<option value="${k}">${PN[k]}</option>`).join('');
 const PRE={
+ original:f=>{const raw=String(f.id||''),id=raw.replace(/^[sp]-/,''),store=(S.extra&&S.extra._originalStyles)||{},o=store[raw]||store[id]||{tagColor:f.tagColor,borderColor:f.borderColor,textColor:f.textColor,tagStyle:f.tagStyle,imageURL:f.imageURL},norm=v=>{const p=parse(v);return p.bad?v:mk(p.rgb,p.a)};return{tagColor:norm(o.tagColor),borderColor:norm(o.borderColor),textColor:norm(o.textColor),tagStyle:o.tagStyle,imageURL:o.imageURL}},
  glass:()=>({tagColor:'#33FFFFFF',borderColor:'#80FFFFFF',tagStyle:'filled'}),
  tint:()=>{const c='7E8AFF';return{tagColor:mk(c,0x40),borderColor:mk(c,0x99),tagStyle:'filled'}},
  smoked:()=>({tagColor:'#66101018',borderColor:'#33FFFFFF',tagStyle:'filled'}),
@@ -1127,7 +1166,7 @@ const PRE={
  inkline:f=>scPalette(f,'inkline'),
  porcelain:f=>scPalette(f,'porcelain'),
  noir:f=>scPalette(f,'noir'),
- signal:f=>scPalette(f,'signal'),original:f=>{const id=String(f.id||'').replace(/^[sp]-/,''),o=(S.extra&&S.extra._originalStyles&&S.extra._originalStyles[id])||{tagColor:f.tagColor,borderColor:f.borderColor,textColor:f.textColor,tagStyle:f.tagStyle,imageURL:f.imageURL};return{tagColor:o.tagColor,borderColor:o.borderColor,textColor:o.textColor,tagStyle:o.tagStyle,imageURL:o.imageURL}},lumen:f=>nxPalette(f,'lumen'),covet:f=>nxPalette(f,'covet'),prism:f=>nxPalette(f,'prism')};
+ signal:f=>scPalette(f,'signal'),lumen:f=>nxPalette(f,'lumen'),covet:f=>nxPalette(f,'covet'),prism:f=>nxPalette(f,'prism'),manuscript:f=>fivePalette(f,'manuscript'),vitrail:f=>fivePalette(f,'vitrail'),counterpoint:f=>fivePalette(f,'counterpoint'),strata:f=>fivePalette(f,'strata'),aperture:f=>fivePalette(f,'aperture')};
 
 function fillSel(){const gf=$('#gf'),sc=$('#scope'),a=gf.value,b=sc.value;
  gf.innerHTML='<option value="">All groups</option>'+gopts('');
