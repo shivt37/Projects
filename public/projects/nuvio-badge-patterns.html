@@ -26,6 +26,7 @@ button:hover{border-color:var(--accent);color:var(--accent)}button.on{background
 button.big{padding:10px 16px;font-size:15px;min-height:42px}
 button.tiny{font-size:12px;padding:3px 9px;min-height:24px}
 .count{font-size:12px;color:var(--muted);margin-left:auto}
+.state{font:600 11px ui-monospace,Consolas,monospace;color:#475467;background:#f0f4f9;border:1px solid #d9e2ee;border-radius:6px;padding:4px 8px}
 .ghead{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:16px 0 4px}
 .gid{font:700 12px ui-monospace,Consolas,monospace;background:var(--accent);color:#fff;border-radius:5px;padding:2px 7px}
 .gn{font-weight:700}
@@ -46,6 +47,8 @@ button.tiny{font-size:12px;padding:3px 9px;min-height:24px}
 .make{font-size:13px;color:#344054;margin:7px 0 2px;white-space:pre-line}
 .pattern-box{margin:8px 0 0;border:1px solid #dfe5ed;border-radius:8px;background:#f6f8fb;overflow:hidden}
 .pattern-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px 4px 11px;background:#eef2f7;border-bottom:1px solid #dfe5ed}
+.decoded{display:none;margin:6px 0 0;padding:7px 9px;border:1px solid #d5e3f4;border-radius:6px;background:#eef4ff;color:#253247;font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
+.decoded.shown{display:block}
 .pattern-label{color:#687386;font-size:10px;font-weight:750;letter-spacing:.09em}
 .copy-button{border:1px solid #ccd6e2;background:#fff;color:#344054;border-radius:6px;padding:4px 11px;min-height:28px;font:600 12px system-ui,sans-serif;cursor:pointer}
 .copy-button.copied{color:#17663a;border-color:#9ac8ac;background:#effaf2}
@@ -120,9 +123,11 @@ body[data-cp]:not([data-cp="original"]) .sw{display:none!important}
 <div class="toolbar">
   <button data-preset="all">All 192</button><button data-preset="core">Core tiers</button>
   <button data-preset="visual">Visual only</button><button data-preset="none">Clear</button>
-  <button id="sync-enabled">Use enabled JSON</button>
-  <label class="chip" for="enabled-json" style="cursor:pointer">Load JSON <input id="enabled-json" type="file" accept=".json,application/json" style="display:none"></label>
-  <span class="count" id="selcount">0 selected</span>
+   <button id="sync-enabled">Use enabled JSON</button>
+   <button id="reset-state">Reset to defaults</button>
+   <label class="chip" for="enabled-json" style="cursor:pointer">Load state / JSON <input id="enabled-json" type="file" accept=".json,application/json" style="display:none"></label>
+   <span class="state" id="state-source">State: default</span>
+   <span class="count" id="selcount">0 selected</span>
 </div>
 <div id="groups"></div>
 
@@ -143,8 +148,8 @@ body[data-cp]:not([data-cp="original"]) .sw{display:none!important}
 
 <h2 id="output">4. Generated patterns <span class="tag" id="outtag"></span></h2>
 <div class="toolbar">
- <button id="copyjson">Copy patterns JSON</button><button id="copyall">Copy all regexes</button>
- <button id="download">Download active main.json</button><span class="count" id="patcount"></span>
+  <button id="copyjson">Copy patterns JSON</button><button id="copyall">Copy all regexes</button>
+  <button id="download">Download active main.json</button><button id="download-state">Download full state</button><span class="count" id="patcount"></span>
 </div>
 <div id="results"></div>
 
@@ -569,34 +574,90 @@ function fivePalette(f,key){
     return dots+code;
    }
 
- let ctx=localStorage.getItem('ndc_ctx')||'source';
-  const emptyImport=groups=>({groups:groups||[],filters:[]});
- const classifyImport=obj=>{
-  if(!obj||!Array.isArray(obj.filters))return B;
-  if(obj.source_import||obj.player_import)return obj;
-  const kinds=new Set(obj.filters.map(f=>String(f.id||'').slice(0,2)));
-  const groups=obj.groups||B.source_import.groups;
-  if(kinds.has('p-')&&!kinds.has('s-'))return{source_import:emptyImport(groups),player_import:obj,groups:groups};
-  if(kinds.has('s-')&&!kinds.has('p-'))return{source_import:obj,player_import:emptyImport(groups),groups:groups};
-  return{source_import:obj,player_import:obj,groups:groups};
- };
- let currentImport=B;
- try{const raw=localStorage.getItem('ndc_enabled_import');if(raw){const obj=JSON.parse(raw);const ci=classifyImport(obj);if(ci!==B)currentImport=ci;}}catch(e){}
- const enabledFromImport=obj=>{
-   const out=new Set();
-   const buckets=[obj&&obj.source_import,obj&&obj.player_import].filter(x=>x&&Array.isArray(x.filters));
-   for(const bucket of buckets){
-     for(const f of bucket.filters){
-       const id=String(f.id||'').replace(/^[sp]-/,'');
-       if(B.meta[id]&&f.isEnabled!==false)out.add(id);
-     }
+  let ctx='source';
+   const emptyImport=groups=>({groups:groups||[],filters:[]});
+  const classifyImport=obj=>{
+   if(!obj||!Array.isArray(obj.filters))return B;
+   if(obj.source_import||obj.player_import)return obj;
+   const kinds=new Set(obj.filters.map(f=>String(f.id||'').slice(0,2)));
+   const groups=obj.groups||B.source_import.groups;
+   if(kinds.has('p-')&&!kinds.has('s-'))return{source_import:emptyImport(groups),player_import:obj,groups:groups};
+   if(kinds.has('s-')&&!kinds.has('p-'))return{source_import:obj,player_import:emptyImport(groups),groups:groups};
+   return{source_import:obj,player_import:obj,groups:groups};
+  };
+  const STATE_KEY='ndc_state_v2',STATE_VERSION=2;
+  const hashString=s=>{let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h.toString(16).padStart(8,'0')};
+  const BUNDLE_HASH=hashString(JSON.stringify({ids:Object.keys(B.meta).sort(),markers:B.markers,source:B.source,player:B.player,groupOrder:B.groupOrder}));
+  const enabledFromImport=obj=>{
+    const out=new Set();
+    const buckets=[obj&&obj.source_import,obj&&obj.player_import].filter(x=>x&&Array.isArray(x.filters));
+    for(const bucket of buckets){
+      for(const f of bucket.filters){
+        const id=String(f.id||'').replace(/^[sp]-/,'');
+        if(B.meta[id]&&f.isEnabled!==false)out.add(id);
+      }
+    }
+    return out;
+  };
+  const validState=obj=>{
+   if(!obj||typeof obj!=='object'||obj.version!==STATE_VERSION)return null;
+   if(obj.bundleHash&&obj.bundleHash!==BUNDLE_HASH)return null;
+   if(!Array.isArray(obj.selected))return null;
+   const ids=obj.selected.filter(id=>B.meta[id]);
+   return{selected:ids,ctx:obj.ctx==='player'?'player':'source',import:obj.import||null,cp:obj.cp||'original',source:obj.source||'saved'};
+  };
+  const readUrlState=()=>{
+   const params=new URLSearchParams(String(location.hash||'').replace(/^#/,''));
+   const raw=params.get('ndc');
+   if(raw===null)return null;
+   const ids=raw.split(',').filter(Boolean).filter(id=>B.meta[id]);
+   return{selected:ids,ctx:params.get('ctx')==='player'?'player':'source',import:null,cp:null,source:'url'};
+  };
+  const hasLegacyState=()=>{try{return localStorage.getItem('ndc_badges')!==null||localStorage.getItem('ndc_enabled_import')!==null;}catch(e){return false;}};
+  const readLegacyState=()=>{
+   let rawImport=null;
+   try{const raw=localStorage.getItem('ndc_enabled_import');if(raw)rawImport=JSON.parse(raw);}catch(e){}
+   const ci=rawImport?classifyImport(rawImport):B;
+   let ids=null;
+   try{const raw=localStorage.getItem('ndc_badges');if(raw)ids=JSON.parse(raw).filter(id=>B.meta[id]);}catch(e){}
+   const selectedIds=ids?ids:[...enabledFromImport(ci)];
+   let legacyCtx='source';try{legacyCtx=localStorage.getItem('ndc_ctx')==='player'?'player':'source';}catch(e){}
+   let legacyCp='original';try{legacyCp=localStorage.getItem('ndc_cp')||'original';}catch(e){}
+   return{selected:selectedIds,ctx:legacyCtx,import:rawImport,cp:legacyCp,source:hasLegacyState()?'legacy':'default'};
+  };
+  let currentImport=B,stateImportRaw=null,stateSource='default',selected=null;
+  const applyState=st=>{
+   selected=new Set(st.selected||[]);
+   ctx=st.ctx==='player'?'player':'source';
+   currentImport=st.import?classifyImport(st.import):B;
+   stateImportRaw=st.import||null;
+   stateSource=st.source||'saved';
+   if(st.cp&&$('#cp-select')&&$('#cp-select').querySelector('option[value="'+st.cp+'"]')){
+    cpKey=st.cp;$('#cp-select').value=cpKey;if(document.body)document.body.dataset.cp=cpKey;
    }
-   return out;
- };
-  let selected=null;
-  try{const raw=localStorage.getItem('ndc_badges');if(raw){const ids=JSON.parse(raw).filter(x=>B.meta[x]);selected=new Set(ids);}}catch(e){}
-  if(selected===null)selected=enabledFromImport(currentImport);
-  if(selected===null||!selected.size&&!localStorage.getItem('ndc_badges'))selected=new Set(Object.keys(B.meta));
+  };
+  const makeState=(source=stateSource)=>({
+   schema:'nuvio-dual-context-state',version:STATE_VERSION,bundleHash:BUNDLE_HASH,
+   source:source==='url'||source==='legacy'?'user':source,
+   selected:[...selected],ctx,cp:cpKey,import:stateImportRaw||null
+  });
+  const clearLegacy=()=>{try{localStorage.removeItem('ndc_badges');localStorage.removeItem('ndc_enabled_import');localStorage.removeItem('ndc_ctx');}catch(e){}};
+  const persistState=source=>{
+   const st=makeState(source||(stateSource==='url'||stateSource==='legacy'?'user':stateSource));
+   stateSource=st.source;
+   try{localStorage.setItem(STATE_KEY,JSON.stringify(st));}catch(e){}
+   clearLegacy();
+  };
+  const urlState=readUrlState();
+  if(urlState)applyState(urlState);
+  else{
+   let stored=null,storedRaw=null;
+   try{storedRaw=localStorage.getItem(STATE_KEY);if(storedRaw)stored=validState(JSON.parse(storedRaw));}catch(e){}
+   if(stored)applyState(stored);
+   else if(!storedRaw)applyState(readLegacyState());
+   else applyState({selected:Object.keys(B.meta),ctx:'source',import:null,cp:'original',source:'default'});
+  }
+  if(!selected)selected=new Set(Object.keys(B.meta));
  const nameOf=id=>(B.meta[id]&&B.meta[id].name)||id;
  const groupOf=id=>(B.meta[id]&&B.meta[id].group)||'x';
  const rankOf=id=>{const m=B.meta[id];return m&&m.rank?m.rank:0;};
@@ -609,8 +670,7 @@ function fivePalette(f,key){
    const rule=HIER[g]===2?'Top 2 of Dolby · DTS · Lossless':hier?'One winner':'All';
    return main+'<span class="gkind-rule">'+rule+'</span>';
   }
- const save=()=>{try{localStorage.setItem('ndc_badges',JSON.stringify([...selected]));localStorage.setItem('ndc_ctx',ctx);}catch(e){}};
- let patterns={}, sourcePatterns={}, playerPatterns={};
+  let patterns={}, sourcePatterns={}, playerPatterns={};
  let bothGroups=new Set(); // always start in "Only active" mode
  const dataFor=()=>ctx==='source'?B.source_data:B.player_data;
   const importFor=()=>ctx==='source'?(currentImport.source_import||B.source_import):(currentImport.player_import||B.player_import);
@@ -657,11 +717,54 @@ function fivePalette(f,key){
     }).join('')+'</div>';
   }).join('')||'<div class="empty">No match.</div>';
  }
-  function patternBox(id, label, pat, attr){
-   return '<div class="pattern-box"><div class="pattern-toolbar"><span class="pattern-label">'+label+'</span>'+
-    '<button class="copy-button" '+attr+'="'+id+'">Copy</button></div>'+
-    '<pre><code>'+esc(pat||'')+'</code></pre></div>';
-  }
+   const markerRev={};for(const id in B.markers)markerRev[B.markers[id]]=id;
+   const markTokens=s=>{let out=String(s||'');for(const m in markerRev)out=out.split(m).join('⟦'+markerRev[m]+'⟧');return out;};
+   const splitTop=(s,ch)=>{const parts=[];let depth=0,start=0;for(let i=0;i<s.length;i++){const c=s[i];if(c==='(')depth++;else if(c===')')depth--;else if(c===ch&&depth===0){parts.push(s.slice(start,i));start=i+1;}}parts.push(s.slice(start));return parts;};
+   const readParen=(s,i)=>{let depth=0;for(let j=i;j<s.length;j++){if(s[j]==='(')depth++;else if(s[j]===')'){depth--;if(depth===0)return{body:s.slice(i+1,j),end:j+1};}}return{body:s.slice(i+1),end:s.length};};
+   const wrapDecode=v=>{const t=String(v||'').trim();if(!t)return'';if(/^\([\s\S]*\)$/.test(t))return t;return(/ \| | AND /.test(t)?'('+t+')':t);};
+   const atom=(v,complex)=>({v,complex:!!complex||/ \| | AND /.test(String(v||''))});
+   function decodeAtoms(s){
+    const out=[];let i=0;
+    while(i<s.length){
+     const c=s[i];
+     if(c===' '||c==='\t'||c==='\n'){i++;continue;}
+     if(s.startsWith('⟦',i)){const e=s.indexOf('⟧',i+1);out.push(atom(s.slice(i+1,e)));i=e+1;continue;}
+     if(s.startsWith('(?:',i)){const r=readParen(s,i);const v=decodeExpr(r.body.slice(2));out.push(atom(v));i=r.end;continue;}
+     if(s.startsWith('(?=.*',i)){const r=readParen(s,i);const v=decodeExpr(r.body.replace(/^\?=\.\*/,''));out.push(atom(v));i=r.end;continue;}
+     if(s.startsWith('.*',i)){i+=2;continue;}
+     if(c==='('){const r=readParen(s,i);out.push(atom(decodeExpr(r.body)));i=r.end;continue;}
+     i++;
+    }
+    return out;
+   }
+   function decodeSeq(s){const a=decodeAtoms(s);if(!a.length)return'';return a.length===1?a[0].v:a.map(x=>x.complex?wrapDecode(x.v):x.v).join(' AND ');}
+   const unwrapDecodeGroup=s=>{let t=String(s||'').trim();while(t.startsWith('(?:')){const r=readParen(t,0);if(r.end!==t.length)break;t=r.body.slice(2).trim();}return t;};
+   function decodeExpr(s){s=unwrapDecodeGroup(s);const parts=splitTop(s,'|');return parts.length>1?parts.map(p=>wrapDecode(decodeSeq(p))).join(' | '):decodeSeq(s);}
+   function decodeSourcePattern(pat){
+    const text=markTokens(pat).replace(/^\(\?i\)\^/,'');
+    const heads=[];let i=0;
+    while(i<text.length){
+     const p=text.indexOf('(?=',i),n=text.indexOf('(?!',i);
+     const start=p<0?n:n<0?p:Math.min(p,n);
+     if(start<0)break;
+     const r=readParen(text,start);
+     heads.push({kind:text.slice(start+2,start+3)==='='?'positive':'negative',body:r.body.replace(/^\?[=!]/,'').replace(/^\.\*/,''),simple:/^\?\!\.\*/.test(r.body)});
+     i=r.end;
+    }
+    const pos=heads.filter(h=>h.kind==='positive').map(h=>decodeExpr(h.body));
+    const negRaw=heads.filter(h=>h.kind==='negative').map(h=>({v:decodeExpr(h.body),simple:h.simple}));
+    const topOp=s=>{let d=0,or=false,and=false;for(let i=0;i<s.length;i++){const c=s[i];if(c==='(')d++;else if(c===')')d--;else if(d===0&&s.startsWith(' | ',i))or=true;else if(d===0&&s.startsWith(' AND ',i))and=true;}return or?'|':and?'AND':'';};
+    const neg=negRaw.map(x=>!x.simple&&(topOp(x.v)==='|'||(negRaw.length>1&&/ AND | \| /.test(x.v)))?'('+x.v+')':x.v);
+    return 'positive: '+(pos.join(' AND ')||'(none)')+'\nnegative: '+(neg.join(' OR ')||'(none)');
+   }
+   function patternBox(id, label, pat, attr){
+    const canDecode=attr==='data-copy-src'||(attr==='data-copy'&&ctx==='source');
+    const decodeBtn=canDecode?'<button class="copy-button" data-decode="'+id+'">Decode</button>':'';
+    const decoded=canDecode?'<div class="decoded" data-decoded="'+id+'"></div>':'';
+    return '<div><div class="pattern-box"><div class="pattern-toolbar"><span class="pattern-label">'+label+'</span>'+
+     '<span style="display:flex;gap:5px">'+decodeBtn+'<button class="copy-button" '+attr+'="'+id+'">Copy</button></span></div>'+
+     '<pre><code>'+esc(pat||'')+'</code></pre></div>'+decoded+'</div>';
+   }
   function card(id){
    const m=B.meta[id]||{},col=m.tier?(B.tierColors[m.tier]||'#8E8E93'):'#8E8E93';
     const g=groupOf(id);
@@ -675,14 +778,15 @@ function fivePalette(f,key){
     cpCardBits(id)+(m.make?'<div class="make">'+esc(m.make)+'</div>':'')+boxes+'</div>';
   }
   function render(){
-   save();
    sourcePatterns=BadgeGen.build(B.source_data,selected);
    playerPatterns=BadgeGen.build(B.player_data,selected);
    patterns=ctx==='source'?sourcePatterns:playerPatterns;
   const ids=Object.keys(patterns);
   ids.sort((a,b)=>B.groupOrder.indexOf(groupOf(a))-B.groupOrder.indexOf(groupOf(b))||rankOf(a)-rankOf(b)||a.localeCompare(b));
-  $('#selcount').textContent=selected.size+' selected';
-  $('#patcount').textContent=ids.length+' patterns';
+   $('#selcount').textContent=selected.size+' selected';
+   const stateLabels={default:'default · all badges',legacy:'migrated legacy state',saved:'saved state',imported:'imported state',url:'URL state',user:'saved after user change'};
+   $('#state-source').textContent='State: '+(stateLabels[stateSource]||stateSource);
+   $('#patcount').textContent=ids.length+' patterns';
   $('#outtag').textContent=ctx==='source'?'source':'player';
   $('#outtag').className='tag '+(ctx==='source'?'src':'plr');
   $('#ctxlabel').textContent=ctx==='source'?'Source context active':'Player context active';
@@ -714,19 +818,32 @@ function fivePalette(f,key){
   return new Promise((ok,no)=>{const a=document.createElement('textarea');a.value=v;a.style.position='fixed';a.style.left='-9999px';document.body.appendChild(a);a.focus();a.select();let r=false;try{r=document.execCommand('copy');}catch(e){}a.remove();r?ok():no();});
  }
  function flash(b,t){const o=b.dataset.o||b.textContent;b.dataset.o=o;b.textContent=t;b.classList.add('copied');setTimeout(()=>{b.textContent=o;b.classList.remove('copied');},1400);}
-  function activeJSON(){
-   const im=importFor(),ids=Object.keys(patterns);
-   const filters=im.filters.map(f=>{
-    const bid=String(f.id||'').replace(/^[sp]-/,'');
-    return ids.includes(bid)?Object.assign({},f,{pattern:patterns[bid],isEnabled:true}):null;
-   }).filter(Boolean);
-   return JSON.stringify({groups:im.groups||B.source_import.groups,filters},null,2);
-  }
-  document.addEventListener('click',e=>{
-   if(e.target.id==='sync-enabled'){selected=enabledFromImport(currentImport);save();renderGroups();render();return;}
-   const p=e.target.closest('[data-preset]');if(p){const all=Object.keys(B.meta);selected=new Set(p.dataset.preset==='all'?all:p.dataset.preset==='none'?[]:p.dataset.preset==='core'?all.filter(i=>['qua','enc','res','vis','spc','aud','cha','enh'].includes(groupOf(i))):all.filter(i=>groupOf(i)==='vis'));renderGroups();render();return;}
-  const gb=e.target.closest('[data-group][data-act]');if(gb){const g=gb.dataset.group;Object.keys(B.meta).filter(i=>groupOf(i)===g).forEach(i=>gb.dataset.act==='all'?selected.add(i):selected.delete(i));renderGroups();render();return;}
-  if(e.target.id==='ctx-source'||e.target.id==='ctx-player'){ctx=e.target.id==='ctx-source'?'source':'player';$('#testname').value=ctx==='source'?'':'2160p 4K UHD HEVC H.265 DV HDR HDR10 Atmos TrueHD 7.1 English';render();return;}
+   function activeJSON(){
+    const im=importFor(),ids=Object.keys(patterns);
+    const filters=im.filters.map(f=>{
+     const bid=String(f.id||'').replace(/^[sp]-/,'');
+     return ids.includes(bid)?Object.assign({},f,{pattern:patterns[bid],isEnabled:true}):null;
+    }).filter(Boolean);
+    return JSON.stringify({groups:im.groups||B.source_import.groups,filters},null,2);
+   }
+   function activeState(){
+    return JSON.stringify(Object.assign(makeState('exported'),{
+     exportedAt:new Date().toISOString(),
+     patterns:{source:sourcePatterns,player:playerPatterns}
+    }),null,2);
+   }
+   function clearState(){
+    try{localStorage.removeItem(STATE_KEY);}catch(e){}
+    clearLegacy();currentImport=B;stateImportRaw=null;selected=new Set(Object.keys(B.meta));ctx='source';stateSource='default';
+    $('#cp-select').value='original';cpKey='original';if(document.body)document.body.dataset.cp='original';
+    renderGroups();render();
+   }
+   document.addEventListener('click',e=>{
+    if(e.target.id==='reset-state'){clearState();return;}
+    if(e.target.id==='sync-enabled'){selected=enabledFromImport(currentImport);persistState('user');renderGroups();render();return;}
+    const p=e.target.closest('[data-preset]');if(p){const all=Object.keys(B.meta);selected=new Set(p.dataset.preset==='all'?all:p.dataset.preset==='none'?[]:p.dataset.preset==='core'?all.filter(i=>['qua','enc','res','vis','spc','aud','cha','enh'].includes(groupOf(i))):all.filter(i=>groupOf(i)==='vis'));persistState('user');renderGroups();render();return;}
+   const gb=e.target.closest('[data-group][data-act]');if(gb){const g=gb.dataset.group;Object.keys(B.meta).filter(i=>groupOf(i)===g).forEach(i=>gb.dataset.act==='all'?selected.add(i):selected.delete(i));persistState('user');renderGroups();render();return;}
+   if(e.target.id==='ctx-source'||e.target.id==='ctx-player'){ctx=e.target.id==='ctx-source'?'source':'player';$('#testname').value=ctx==='source'?'':'2160p 4K UHD HEVC H.265 DV HDR HDR10 Atmos TrueHD 7.1 English';persistState('user');render();return;}
   if(e.target.id==='sample'){if(ctx==='source'){$('#testname').value=[...selected].map(i=>B.markers[i]||'').join('');testName();}else{$('#testname').value='2160p 4K UHD HEVC DV HDR10+ Atmos TrueHD DTS-HD MA 7.1 English';testName();}return;}
    if(e.target.id==='fmt-invisible'||e.target.id==='fmt-combine'){
     fmtMode=e.target.id==='fmt-invisible'?'invisible':'combined';renderFormatter();return;}
@@ -742,29 +859,35 @@ function fivePalette(f,key){
    const bt=e.target.closest('[data-both]');if(bt){const g=bt.dataset.both;
      if(bothGroups.has(g))bothGroups.delete(g);else bothGroups.add(g);
      render();return;}
-   const b=e.target.closest('button');if(!b)return;
-   if(b.dataset.copySrc){copyText(sourcePatterns[b.dataset.copySrc]||'').then(()=>flash(b,'Copied ✓'));return;}
+    const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.decode){const out=[...document.querySelectorAll('[data-decoded]')].find(x=>x.dataset.decoded===b.dataset.decode);if(out){out.textContent=decodeSourcePattern(sourcePatterns[b.dataset.decode]||'');out.classList.add('shown');}return;}
+    if(b.dataset.copySrc){copyText(sourcePatterns[b.dataset.copySrc]||'').then(()=>flash(b,'Copied ✓'));return;}
    if(b.dataset.copyPlr){copyText(playerPatterns[b.dataset.copyPlr]||'').then(()=>flash(b,'Copied ✓'));return;}
    if(b.dataset.copy){copyText(patterns[b.dataset.copy]||'').then(()=>flash(b,'Copied ✓'));return;}
   if(b.id==='copyjson'){copyText(JSON.stringify(patterns,null,2)).then(()=>flash(b,'Copied ✓'));return;}
   if(b.id==='copyall'){copyText(Object.entries(patterns).map(([k,v])=>k+'\t'+v).join('\n')).then(()=>flash(b,'Copied ✓'));return;}
-  if(b.id==='download'){const blob=new Blob([activeJSON()],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=ctx+'_patterns.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+   if(b.id==='download'){const blob=new Blob([activeJSON()],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=ctx+'_patterns.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);return;}
+   if(b.id==='download-state'){const blob=new Blob([activeState()],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='nuvio_state_v2.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);return;}
  });
-  document.addEventListener('change',e=>{
-   if(e.target.id==='enabled-json'){
-    const file=e.target.files&&e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=()=>{try{const obj=JSON.parse(String(reader.result));if(!obj||!Array.isArray(obj.filters))throw new Error('JSON must contain filters[]');
-      currentImport=classifyImport(obj);
-      try{localStorage.setItem('ndc_enabled_import',JSON.stringify(obj));}catch(e){}
-      selected=enabledFromImport(currentImport);
-      save();renderGroups();render();}catch(err){alert('Could not load enabled JSON: '+err.message);}finally{e.target.value='';}};
-    reader.readAsText(file);return;
-   }
-   if(e.target.type==='checkbox'){const el=e.target.closest('.chip'),id=el.dataset.id;e.target.checked?selected.add(id):selected.delete(id);el.classList.toggle('on',e.target.checked);render();}
-  });
-  $('#q').addEventListener('input',renderGroups);
-  $('#cp-select').addEventListener('change',()=>{cpKey=$('#cp-select').value;if(document.body)document.body.dataset.cp=cpKey;try{localStorage.setItem('ndc_cp',cpKey)}catch(e){}renderGroups();render();});
+   document.addEventListener('change',e=>{
+    if(e.target.id==='enabled-json'){
+     const file=e.target.files&&e.target.files[0];if(!file)return;
+     const reader=new FileReader();
+     reader.onload=()=>{try{const obj=JSON.parse(String(reader.result));
+       const full=validState(obj.state||obj);
+       if(full){applyState(Object.assign({},full,{source:'imported'}));persistState('imported');}
+       else{
+        if(!obj||!Array.isArray(obj.filters))throw new Error('JSON must be a state file or contain filters[]');
+        applyState({selected:[...enabledFromImport(classifyImport(obj))],ctx,import:obj,cp:cpKey,source:'imported'});
+        persistState('imported');
+       }
+       renderGroups();render();}catch(err){alert('Could not load state / JSON: '+err.message);}finally{e.target.value='';}};
+     reader.readAsText(file);return;
+    }
+    if(e.target.type==='checkbox'){const el=e.target.closest('.chip'),id=el.dataset.id;e.target.checked?selected.add(id):selected.delete(id);el.classList.toggle('on',e.target.checked);persistState('user');render();}
+   });
+   $('#q').addEventListener('input',renderGroups);
+   $('#cp-select').addEventListener('change',()=>{cpKey=$('#cp-select').value;if(document.body)document.body.dataset.cp=cpKey;persistState('user');renderGroups();render();});
   $('#testname').addEventListener('input',testName);
   $('#my-fmt-name').addEventListener('input',()=>{saveMy();renderFormatter();});
   $('#my-fmt-desc').addEventListener('input',()=>{saveMy();renderFormatter();});
