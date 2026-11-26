@@ -767,6 +767,29 @@ button.ib{width:29px;height:29px}
 /* the generic .warn banner style leaked into the Warnings stat tile; keep it a normal tile */
 .health-stat.warn{display:block;margin-top:0;font-size:inherit;color:inherit;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
 @media(max-width:760px){.health-stat.warn{padding:8px}}
+.fields label.preserve-toggle{position:relative;display:flex;flex-direction:row;align-items:center;gap:9px;text-align:left;min-width:0;min-height:44px;grid-column:span 1;padding:7px 9px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--muted);cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.preserve-toggle:hover{border-color:var(--border-strong);background:var(--surface-3)}
+.preserve-toggle:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.preserve-toggle input{appearance:none;-webkit-appearance:none;position:relative;width:20px;height:20px;flex:none;border:1.5px solid var(--border-strong);border-radius:6px;background:var(--surface);cursor:pointer;transition:background .15s ease,border-color .15s ease,transform .1s ease}
+.preserve-toggle input:active{transform:scale(.92)}
+.preserve-toggle input:checked{background:var(--accent);border-color:var(--accent)}
+.preserve-toggle input:checked::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.preserve-dot{width:10px;height:10px;flex:none;border-radius:50%;background:conic-gradient(#FF3B30 0 20%,#FFCC00 0 40%,#34C759 0 60%,#007AFF 0 80%,#5856D6 0);box-shadow:0 0 0 1px rgba(255,255,255,.35),0 0 0 2px var(--border);opacity:.85}
+.preserve-copy{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;line-height:1.2}
+.preserve-copy strong{color:var(--text);font-size:10.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preserve-copy small{font-size:9.5px;font-weight:450;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preserve-chip{flex:none;padding:3px 6px;border:1px solid var(--border);border-radius:99px;font:700 8.5px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--surface)}
+.preserve-chip::before{content:"Recolor"}
+.preserve-toggle.is-on{border-color:color-mix(in srgb,var(--ok) 45%,var(--border));background:color-mix(in srgb,var(--ok) 7%,var(--surface-2))}
+.preserve-toggle.is-on .preserve-chip{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,var(--border));background:color-mix(in srgb,var(--ok) 10%,var(--surface))}
+.preserve-toggle.is-on .preserve-chip::before{content:"Original"}
+.preserve-toggle.is-on .preserve-dot{opacity:1;box-shadow:0 0 0 1px rgba(255,255,255,.55),0 0 0 2px color-mix(in srgb,var(--ok) 45%,var(--border))}
+.color-field.is-preserved{opacity:.42;filter:saturate(.45)}
+.bulk-preserve-field{grid-column:1/-1;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.bulk-preserve-field select{flex:1;min-width:150px}
+.bulk-preserve-field small{flex-basis:100%}
+@media(max-width:760px){.fields label.preserve-toggle{grid-column:1/-1;width:100%;min-height:48px}.bulk-preserve-field{align-items:stretch;flex-direction:column}.bulk-preserve-field select{width:100%;min-width:0}}
+@media(max-width:390px){.fields label.preserve-toggle{padding:7px 8px;gap:7px}.preserve-copy small{display:none}.preserve-chip{font-size:8px;padding:3px 5px}}
 
 </style>
 
@@ -863,7 +886,7 @@ button.ib{width:29px;height:29px}
   </div>
   <div class="global-recolor-foot">
     <p class="hint" id="global-svg-status" role="status" aria-live="polite">SVG artwork only · raster images are skipped.</p>
-    <span class="global-note">Fill and border stay unchanged.</span>
+    <span class="global-note">Fill and border stay unchanged. SVGs preserving original colors are skipped.</span>
   </div>
 </section>
 
@@ -969,6 +992,7 @@ button.ib{width:29px;height:29px}
       <label class="bulk-field"><span>Fill color · ARGB</span><input id="bulk-fill" type="text" placeholder="#CCFFFFFF" spellcheck="false"><span class="alpha-row"><input id="bulk-fill-alpha" type="range" min="0" max="255" step="1" value="255" aria-label="Fill opacity"><span class="pct" id="bulk-fill-alpha-val">100%</span></span></label>
       <label class="bulk-field"><span>Border color · ARGB</span><input id="bulk-border" type="text" placeholder="#80FFFFFF" spellcheck="false"><span class="alpha-row"><input id="bulk-border-alpha" type="range" min="0" max="255" step="1" value="255" aria-label="Border opacity"><span class="pct" id="bulk-border-alpha-val">100%</span></span></label>
       <label class="bulk-field bulk-svg"><span>SVG artwork color · ARGB</span><input id="bulk-svg" type="text" placeholder="#FFFFFFFF" spellcheck="false"><span class="alpha-row"><input id="bulk-svg-alpha" type="range" min="0" max="255" step="1" value="255" aria-label="SVG artwork opacity"><span class="pct" id="bulk-svg-alpha-val">100%</span></span><small>Only SVG badges are recolored. Raster images are unchanged.</small></label>
+      <label class="bulk-field bulk-preserve-field"><span>SVG color mode</span><select id="bulk-svg-mode"><option value="keep">Do not change</option><option value="recolor">Recolor with color above</option><option value="preserve">Preserve original SVG colors</option></select><small>Preserve ignores the color above and restores the SVG's own colors when available.</small></label>
     </div>
     <div class="modal-foot"><span class="hint" id="bulk-status">Leave a field blank to keep that property unchanged.</span><div class="modal-buttons"><button type="button" data-modal-close="bulk">Cancel</button><button class="pri" type="button" id="bulk-apply">Apply to group</button></div></div>
   </section>
@@ -988,6 +1012,7 @@ const SVG_ERRORS=new WeakMap(),TEXT_COLOR_TIMERS=new WeakMap();
 let LOAD_SEQ=0,IMPORT_EMBEDDING=false;
 const H=n=>(+n).toString(16).padStart(2,'0').toUpperCase();
 const groupRecord=g=>({id:String(g?.id??''),name:String(g?.name??''),isExpanded:g?.isExpanded!==false});
+const hasBadgeTextColor=f=>Object.prototype.hasOwnProperty.call(f||{},'textColor')&&f.textColor!=null&&String(f.textColor).trim()!=='';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function parse(c){c=String(c??'').trim().replace(/^#+/,'');
  if(/^[0-9a-f]{6}$/i.test(c))return{rgb:c.toUpperCase(),a:255};
@@ -1020,8 +1045,8 @@ function stage0(){const st=$('#stage'),t=$('#test').value;st.innerHTML='';docume
   const g=document.createElement('div');g.className='grp';g.innerHTML='<small>'+esc(gname(id))+'</small>';
   fs.forEach(f=>g.append(chip(f)));st.append(g)})}
 
-function colF(t,i,k,lab,v){const p=parse(v),d=`data-t="${t}" data-i="${i}" data-k="${k}"`;
- return`<label class="color-field">${lab}<div class="col"><input type="color" ${d} data-p="pick" value="#${p.rgb.toLowerCase()}" aria-label="${esc(lab)} picker"><input type="text" ${d} data-p="hex" value="${esc(v||'')}" spellcheck="false" aria-label="${esc(lab)} ARGB value"><div class="alpha-row"><input type="range" ${d} data-p="alpha" min="0" max="255" step="1" value="${p.a}" aria-label="${esc(lab)} opacity"><span class="pct" aria-live="off">${Math.round(p.a/2.55)}%</span></div></div></label>`}
+function colF(t,i,k,lab,v,disabled){const p=parse(v),d=`data-t="${t}" data-i="${i}" data-k="${k}"`,dis=disabled?' disabled':'';
+  return`<label class="color-field${disabled?' is-preserved':''}">${lab}<div class="col"><input type="color" ${d} data-p="pick" value="#${p.rgb.toLowerCase()}"${dis} aria-label="${esc(lab)} picker"><input type="text" ${d} data-p="hex" value="${esc(v||'')}"${dis} spellcheck="false" aria-label="${esc(lab)} ARGB value"><div class="alpha-row"><input type="range" ${d} data-p="alpha" min="0" max="255" step="1" value="${p.a}"${dis} aria-label="${esc(lab)} opacity"><span class="pct" aria-live="off">${Math.round(p.a/2.55)}%</span></div></div></label>`}
 function gopts(cur){return S.groups.map(g=>`<option value="${esc(g.id)}"${g.id===cur?' selected':''}>${esc(g.name||g.id)}</option>`).join('')+(cur&&!S.groups.some(g=>g.id===cur)?`<option selected>${esc(cur)}</option>`:'')}
 const STY=['filled','bordered','filled and bordered'];
 const SC_ROLE={
@@ -1156,7 +1181,7 @@ function fivePalette(f,key){
 const PN={original:'Original (imported)',glass:'Liquid Glass - clear',tint:'Liquid Glass - accent tint',smoked:'Liquid Glass - smoked',outline:'Outline only',solid:'Solid dark',light:'Solid light (for dark glyphs)',inkline:'Studio - Inkline',porcelain:'Studio - Porcelain',noir:'Studio - Noir Glass',signal:'Studio - Signal',lumen:'Studio - Lumen',covet:'Studio - Covet',prism:'Studio - Prism',manuscript:'Studio - Manuscript',vitrail:'Studio - Vitrail',counterpoint:'Studio - Counterpoint',strata:'Studio - Strata',aperture:'Studio - Aperture'};
 const PO=Object.keys(PN).map(k=>`<option value="${k}">${PN[k]}</option>`).join('');
 const PRE={
- original:f=>{const raw=String(f.id||''),id=raw.replace(/^[sp]-/,''),store=(S.extra&&S.extra._originalStyles)||{},o=store[raw]||store[id]||{tagColor:f.tagColor,borderColor:f.borderColor,textColor:f.textColor,tagStyle:f.tagStyle,imageURL:f.imageURL},norm=v=>{const p=parse(v);return p.bad?v:mk(p.rgb,p.a)};return{tagColor:norm(o.tagColor),borderColor:norm(o.borderColor),textColor:norm(o.textColor),tagStyle:o.tagStyle,imageURL:o.imageURL}},
+  original:f=>{const raw=String(f.id||''),id=raw.replace(/^[sp]-/,''),store=(S.extra&&S.extra._originalStyles)||{},o=store[raw]||store[id]||{tagColor:f.tagColor,borderColor:f.borderColor,textColor:f.textColor,tagStyle:f.tagStyle,imageURL:f.imageURL,svgPreserveOriginal:f.svgPreserveOriginal},norm=v=>{const p=parse(v);return p.bad?v:mk(p.rgb,p.a)};return{tagColor:norm(o.tagColor),borderColor:norm(o.borderColor),textColor:norm(o.textColor),tagStyle:o.tagStyle,imageURL:o.imageURL,svgPreserveOriginal:o.svgPreserveOriginal===true}},
  glass:()=>({tagColor:'#33FFFFFF',borderColor:'#80FFFFFF',tagStyle:'filled'}),
  tint:()=>{const c='7E8AFF';return{tagColor:mk(c,0x40),borderColor:mk(c,0x99),tagStyle:'filled'}},
  smoked:()=>({tagColor:'#66101018',borderColor:'#33FFFFFF',tagStyle:'filled'}),
@@ -1205,7 +1230,8 @@ function render(nc){
   <label class="wide field-image">Image URL<input ${di} data-k="imageURL" value="${esc(f.imageURL)}" spellcheck="false" placeholder="https://…/badge.svg or .png - or use Upload SVG"></label>
   <div class="wide imgrow"></div>
   <label class="wide field-pattern">Pattern<textarea rows="2" ${di} data-k="pattern" spellcheck="false">${esc(f.pattern)}</textarea></label>
-  ${colF('f',i,'tagColor','Fill',f.tagColor)}${colF('f',i,'borderColor','Border',f.borderColor)}${colF('f',i,'textColor','SVG artwork',f.textColor)}
+  ${colF('f',i,'tagColor','Fill',f.tagColor)}${colF('f',i,'borderColor','Border',f.borderColor)}${colF('f',i,'textColor','SVG artwork',f.textColor,f.svgPreserveOriginal)}
+  <label class="preserve-toggle${f.svgPreserveOriginal?' is-on':''}"><span class="preserve-dot" aria-hidden="true"></span><input type="checkbox" ${di} data-k="svgPreserveOriginal" ${f.svgPreserveOriginal?'checked':''}><span class="preserve-copy"><strong>Keep original colors</strong><small>Use the SVG's own palette</small></span><span class="preserve-chip" aria-hidden="true"></span></label>
   <label class="field-preset">Preset<select data-pre="${i}"><option value="">Choose…</option>${PO}</select></label>
   </div>`;
   d.querySelector('.pvw').append(chip(f));imgRow(d,f);L.append(d)});
@@ -1237,7 +1263,8 @@ function lh(e){const el=e.target,k=el.dataset.k;if(!k)return;const t=el.dataset.
   if(next!==old){o.id=next;S.filters.forEach(f=>{if(String(f.groupId||'')===old)f.groupId=next});el.value=next}
  }else o[k]=el.type==='checkbox'?el.checked:el.value;
  if(k==='pattern'){try{rx(el.value);el.style.borderColor=''}catch(_){el.style.borderColor='#F16A6A'}}
- lite(el,o,t);if(t==='f'&&k==='textColor')scheduleTextColor(o)}
+  lite(el,o,t);if(t==='f'&&k==='svgPreserveOriginal'){applyPreserveMode(o);render(true);toast(o.svgPreserveOriginal?'SVG original colors preserved':'SVG artwork recoloring re-enabled')}
+  else if(t==='f'&&k==='textColor'&&!o.svgPreserveOriginal)scheduleTextColor(o)}
 
 $('#list').addEventListener('toggle',e=>{const d=e.target;if(d.className==='card'){const f=S.filters[d.dataset.i];if(f)d.open?OP.add(f):OP.delete(f)}},true);
 $('#list').addEventListener('change',e=>{const s=e.target;if(s.dataset.pre===undefined||!s.value)return;
@@ -1260,7 +1287,7 @@ $('#groups').addEventListener('click',e=>{const b=e.target.closest('button[data-
 $('#gadd').onclick=()=>{const n=prompt('Group name?');if(!n||!n.trim())return;const base='g-'+n.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');const ids=new Set(S.groups.map(g=>g.id));let id=base||'group',k=2;while(ids.has(id))id=base+'-'+k++;
  S.groups.push({id,name:n.trim(),isExpanded:true});S.hg=true;render()};
 $('#add').onclick=()=>{if(!S.groups.length&&!S.filters.length)S.groups.push({id:'g1',name:'Group 1',isExpanded:true});
- const gid=$('#gf').value||(S.groups[0]||{}).id||'',f={id:uid('new-badge'),groupId:gid,name:'New badge',pattern:'(?i)\\bnew\\b',imageURL:'',isEnabled:true,tagColor:PRE.glass().tagColor,tagStyle:PRE.glass().tagStyle,textColor:'#FFFFFFFF',borderColor:PRE.glass().borderColor};
+  const gid=$('#gf').value||(S.groups[0]||{}).id||'',f={id:uid('new-badge'),groupId:gid,name:'New badge',pattern:'(?i)\\bnew\\b',imageURL:'',svgSourceURL:'',svgPreserveOriginal:false,isEnabled:true,tagColor:PRE.glass().tagColor,tagStyle:PRE.glass().tagStyle,textColor:'#FFFFFFFF',borderColor:PRE.glass().borderColor};
  S.filters.push(f);OP.add(f);render();const c=$('#list').lastElementChild;if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'center'})};
 $('#new').onclick=()=>{if(S.filters.length&&!confirm('Discard the current set?'))return;
  S={filters:[],groups:[{id:'g1',name:'Group 1',isExpanded:true}],extra:{},hg:true};fname='nuvio-badges.json';resetHistory();render()};
@@ -1272,11 +1299,11 @@ async function load(txt,name){
  let d;try{d=JSON.parse(txt)}catch(e){return alert('Not valid JSON: '+e.message)}
  if(!d||typeof d!=='object'||!Array.isArray(d.filters))return alert('No "filters" array found. Is this a Nuvio/Fusion badge file?');
  if(d.filters.some(f=>!f||typeof f!=='object'||Array.isArray(f)))return alert('This file contains a badge entry that is not a JSON object. No changes were loaded.');
- const filters=d.filters.map(f=>({...f})),groups=Array.isArray(d.groups)?d.groups.filter(g=>g&&typeof g==='object'&&!Array.isArray(g)).map(groupRecord):[];
- const{filters:_filters,groups:_groups,...extra}=d;
- const fixColor=v=>typeof v==='string'?v.replace(/^#{2,}/,'#'):v;
- filters.forEach(f=>['tagColor','borderColor','textColor'].forEach(k=>{if(f[k]!=null)f[k]=fixColor(f[k])}));
-  extra._originalStyles=Object.fromEntries(filters.map(f=>[f.id,{tagColor:f.tagColor,borderColor:f.borderColor,textColor:f.textColor,tagStyle:f.tagStyle,imageURL:f.imageURL}]));
+  const filters=d.filters.map(f=>({...f})),groups=Array.isArray(d.groups)?d.groups.filter(g=>g&&typeof g==='object'&&!Array.isArray(g)).map(groupRecord):[];
+  const{filters:_filters,groups:_groups,...extra}=d;
+  const fixColor=v=>typeof v==='string'?v.replace(/^#{2,}/,'#'):v;
+  filters.forEach(f=>{['tagColor','borderColor','textColor'].forEach(k=>{if(f[k]!=null)f[k]=fixColor(f[k])});f.svgPreserveOriginal=f.svgPreserveOriginal===true||!hasBadgeTextColor(f);if(typeof f.svgSourceURL!=='string')f.svgSourceURL='';if(!f.svgSourceURL&&isSvgDataUrl(f.imageURL))f.svgSourceURL=f.imageURL});
+   extra._originalStyles=Object.fromEntries(filters.map(f=>[f.id,{tagColor:f.tagColor,borderColor:f.borderColor,textColor:f.textColor,tagStyle:f.tagStyle,imageURL:f.imageURL,svgPreserveOriginal:f.svgPreserveOriginal}]));
  const seq=++LOAD_SEQ;
  S={filters,groups,extra,hg:Array.isArray(d.groups)};fname=name||fname;const reordered=syncFilterOrder();
  $('#gf').value='';resetHistory();render();
@@ -1287,8 +1314,9 @@ async function load(txt,name){
   if(seq!==LOAD_SEQ)return;
   render();commit();syncGlobalSvgColorFromFilters();
   const parts=[];if(stats.embedded)parts.push(stats.embedded+' SVG'+(stats.embedded===1?'':'s')+' embedded');
-  if(stats.recolored)parts.push(stats.recolored+' artwork recolored');
-  if(stats.failed)parts.push(stats.failed+' SVG'+(stats.failed===1?'':'s')+' kept as original URL/data');
+   if(stats.recolored)parts.push(stats.recolored+' artwork recolored');
+   if(stats.preserved)parts.push(stats.preserved+' SVG'+(stats.preserved===1?'':'s')+' preserving original colors');
+   if(stats.failed)parts.push(stats.failed+' SVG'+(stats.failed===1?'':'s')+' kept as original URL/data');
   toast('Loaded '+filters.length+' badges'+(groups.length?' · '+groups.length+' groups':'')+(reordered?' · reordered to match group order':'')+(parts.length?' · '+parts.join(' · '):''));
   if(stats.failed&&setup)setup.textContent=`${stats.failed} SVG image(s) could not be embedded. Their original imageURL values were kept; check each badge's image status.`;
  }catch(e){if(seq===LOAD_SEQ)toast('Loaded JSON, but SVG processing stopped: '+e.message)}
@@ -1356,7 +1384,7 @@ function mergePackData(packs,replace){
   for(const raw of pack.filters){const f={...raw};const oldGroup=String(f.groupId||'').trim();
    if(oldGroup){if(!map.has(oldGroup)){const existing=groups.find(g=>String(g.id)===oldGroup);if(existing)map.set(oldGroup,oldGroup);else{const id=uniqueName(oldGroup,usedGroups,'imported-group');groups.push({id,name:oldGroup,isExpanded:true});map.set(oldGroup,id);placeholders++}}f.groupId=map.get(oldGroup)}
    const oldId=String(f.id||'').trim();if(!oldId||usedFilters.has(oldId)){f.id=uniqueName(oldId||'imported-badge',usedFilters,'imported-badge');filterRenames++}else{f.id=oldId;usedFilters.add(oldId)}
-   const fixColor=v=>typeof v==='string'?v.replace(/^#{2,}/,'#'):v;['tagColor','borderColor','textColor'].forEach(k=>{if(f[k]!=null)f[k]=fixColor(f[k])});filters.push(f);added.push(f);
+    const fixColor=v=>typeof v==='string'?v.replace(/^#{2,}/,'#'):v;['tagColor','borderColor','textColor'].forEach(k=>{if(f[k]!=null)f[k]=fixColor(f[k])});f.svgPreserveOriginal=f.svgPreserveOriginal===true||!hasBadgeTextColor(f);if(typeof f.svgSourceURL!=='string')f.svgSourceURL='';filters.push(f);added.push(f);
   }
  }
  return{groups,filters,extra,added,groupRenames,filterRenames,placeholders};
@@ -1376,7 +1404,7 @@ $('#merge-apply').onclick=async()=>{
 $('#merge-modal').addEventListener('click',e=>{if(e.target.matches('[data-modal-close="merge"]')||e.target===$('#merge-modal'))closeModal('merge')});
 
 // Group-level bulk editing applies directly to the group's filters, never to the group JSON record.
-function openBulk(groupId){const sel=$('#bulk-group');sel.innerHTML=S.groups.map(g=>`<option value="${esc(g.id)}">${esc(g.name||g.id)} · ${S.filters.filter(f=>f.groupId===g.id).length}</option>`).join('');if(!S.groups.length){toast('Create a group first');return}sel.value=groupId||S.groups[0].id;$('#bulk-enabled').value='keep';$('#bulk-style').value='';$('#bulk-fill').value='';$('#bulk-border').value='';$('#bulk-svg').value='';['fill','border','svg'].forEach(k=>{const sl=$('#bulk-'+k+'-alpha'),lab=$('#bulk-'+k+'-alpha-val');const vals=S.filters.filter(f=>String(f.groupId||'')===sel.value).map(f=>parse(k==='fill'?f.tagColor:k==='border'?f.borderColor:f.textColor)).filter(p=>!p.bad).map(p=>p.a);const same=vals.length>0&&vals.every(a=>a===vals[0]);const a=same?vals[0]:255;sl.value=a;lab.textContent=same?Math.round(a/2.55)+'%':'100%';sl.dataset.touched=''});$('#bulk-subtitle').textContent='Apply one or more changes to every badge in '+gname(sel.value)+'.';$('#bulk-modal').classList.add('show');$('#bulk-modal').setAttribute('aria-hidden','false')}
+function openBulk(groupId){const sel=$('#bulk-group');sel.innerHTML=S.groups.map(g=>`<option value="${esc(g.id)}">${esc(g.name||g.id)} · ${S.filters.filter(f=>f.groupId===g.id).length}</option>`).join('');if(!S.groups.length){toast('Create a group first');return}sel.value=groupId||S.groups[0].id;$('#bulk-enabled').value='keep';$('#bulk-style').value='';$('#bulk-fill').value='';$('#bulk-border').value='';$('#bulk-svg').value='';$('#bulk-svg-mode').value='keep';['fill','border','svg'].forEach(k=>{const sl=$('#bulk-'+k+'-alpha'),lab=$('#bulk-'+k+'-alpha-val');const vals=S.filters.filter(f=>String(f.groupId||'')===sel.value).map(f=>parse(k==='fill'?f.tagColor:k==='border'?f.borderColor:f.textColor)).filter(p=>!p.bad).map(p=>p.a);const same=vals.length>0&&vals.every(a=>a===vals[0]);const a=same?vals[0]:255;sl.value=a;lab.textContent=same?Math.round(a/2.55)+'%':'100%';sl.dataset.touched=''});$('#bulk-subtitle').textContent='Apply one or more changes to every badge in '+gname(sel.value)+'.';$('#bulk-modal').classList.add('show');$('#bulk-modal').setAttribute('aria-hidden','false')}
 $('#groups').addEventListener('click',e=>{const b=e.target.closest('button[data-a="gbulk"]');if(b){e.preventDefault();openBulk(S.groups[+b.dataset.i]?.id)}});
 $('#bulk-group').addEventListener('change',e=>$('#bulk-subtitle').textContent='Apply one or more changes to every badge in '+gname(e.target.value)+'.');
 ['fill','border','svg'].forEach(k=>{
@@ -1386,7 +1414,7 @@ $('#bulk-group').addEventListener('change',e=>$('#bulk-subtitle').textContent='A
 });
 $('#bulk-apply').onclick=async()=>{
  const gid=$('#bulk-group').value,targets=S.filters.filter(f=>String(f.groupId||'')===gid);if(!targets.length){toast('This group has no badges');return}
- const enabled=$('#bulk-enabled').value,style=$('#bulk-style').value,fill=$('#bulk-fill').value.trim(),border=$('#bulk-border').value.trim(),svg=$('#bulk-svg').value.trim();
+  const enabled=$('#bulk-enabled').value,style=$('#bulk-style').value,fill=$('#bulk-fill').value.trim(),border=$('#bulk-border').value.trim(),svg=$('#bulk-svg').value.trim(),svgMode=$('#bulk-svg-mode').value;
  if(fill&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(fill)){$('#bulk-fill').style.borderColor='#F16A6A';toast('Invalid fill color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-fill').style.borderColor='';
  if(border&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(border)){$('#bulk-border').style.borderColor='#F16A6A';toast('Invalid border color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-border').style.borderColor='';
  if(svg&&!/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(svg)){$('#bulk-svg').style.borderColor='#F16A6A';toast('Invalid SVG color. Use #RRGGBB or #AARRGGBB');return}else $('#bulk-svg').style.borderColor='';
@@ -1395,20 +1423,29 @@ $('#bulk-apply').onclick=async()=>{
   const fa=sl('fill').dataset.touched?+sl('fill').value:null;
   const ba=sl('border').dataset.touched?+sl('border').value:null;
   const sa=sl('svg').dataset.touched?+sl('svg').value:null;
-  let changed=0;const svgTargets=[];
-  targets.forEach(f=>{
-   let c=false;
-   if(enabled==='enable'&&f.isEnabled===false){f.isEnabled=true;c=true}else if(enabled==='disable'&&f.isEnabled!==false){f.isEnabled=false;c=true}
-   if(style&&f.tagStyle!==style){f.tagStyle=style;c=true}
-   let nf=fill||f.tagColor;if(fa!==null)nf=withA(nf,fa);if(nf&&nf!==f.tagColor){f.tagColor=nf;c=true}
-   let nb=border||f.borderColor;if(ba!==null)nb=withA(nb,ba);if(nb&&nb!==f.borderColor){f.borderColor=nb;c=true}
-   let ns=svg||f.textColor;if(sa!==null)ns=withA(ns,sa);if(ns&&ns!==f.textColor){f.textColor=ns;c=true;if(isSvgFilter(f))svgTargets.push(f)}
-   if(c)changed++;
-  });
-  if(!changed){toast('No changes to apply');return}
-  closeModal('bulk');render();
-  if(svgTargets.length){const seq=++LOAD_SEQ;IMPORT_EMBEDDING=true;$('#dl').disabled=true;$('#cp').disabled=true;try{const st=await processImportedSvgs(svgTargets,seq);if(seq===LOAD_SEQ){render();commit();toast('Bulk edit applied · '+svgTargets.length+' SVG artwork color(s) processed'+(st.failed?' · '+st.failed+' original URL(s) retained':''))}}finally{if(seq===LOAD_SEQ){IMPORT_EMBEDDING=false;$('#dl').disabled=false;$('#cp').disabled=false;updateGlobalSvgUI()}}}
-  else {commit();toast('Updated '+targets.length+' badge(s) in '+gname(gid))}
+   let changed=0;const svgTargets=[];
+   targets.forEach(f=>{
+    let c=false;
+    if(enabled==='enable'&&f.isEnabled===false){f.isEnabled=true;c=true}else if(enabled==='disable'&&f.isEnabled!==false){f.isEnabled=false;c=true}
+    if(style&&f.tagStyle!==style){f.tagStyle=style;c=true}
+    let nf=fill||f.tagColor;if(fa!==null)nf=withA(nf,fa);if(nf&&nf!==f.tagColor){f.tagColor=nf;c=true}
+    let nb=border||f.borderColor;if(ba!==null)nb=withA(nb,ba);if(nb&&nb!==f.borderColor){f.borderColor=nb;c=true}
+    if(svgMode==='preserve'){
+     if(!f.svgPreserveOriginal){f.svgPreserveOriginal=true;c=true}
+     if(isSvgFilter(f))svgTargets.push(f);
+    }else if(svgMode==='recolor'){
+     if(f.svgPreserveOriginal){f.svgPreserveOriginal=false;c=true}
+     let ns=svg||f.textColor;if(sa!==null)ns=withA(ns,sa);if(ns&&ns!==f.textColor){f.textColor=ns;c=true}
+     if(isSvgFilter(f))svgTargets.push(f);
+    }else{
+     let ns=svg||f.textColor;if(sa!==null)ns=withA(ns,sa);if(ns&&ns!==f.textColor){f.textColor=ns;c=true;if(isSvgFilter(f))svgTargets.push(f)}
+    }
+    if(c)changed++;
+   });
+   if(!changed){toast('No changes to apply');return}
+   closeModal('bulk');render();
+   if(svgTargets.length){const seq=++LOAD_SEQ;IMPORT_EMBEDDING=true;$('#dl').disabled=true;$('#cp').disabled=true;try{const st=await processImportedSvgs(svgTargets,seq);if(seq===LOAD_SEQ){render();commit();toast('Bulk edit applied · '+svgTargets.length+' SVG artwork(s) processed'+(svgMode==='preserve'?' with original colors preserved':svgMode==='recolor'?' with recoloring re-enabled':'')+(st.failed?' · '+st.failed+' original URL(s) retained':''))}}finally{if(seq===LOAD_SEQ){IMPORT_EMBEDDING=false;$('#dl').disabled=false;$('#cp').disabled=false;updateGlobalSvgUI()}}}
+   else {commit();toast('Updated '+targets.length+' badge(s) in '+gname(gid))}
 };
 $('#bulk-modal').addEventListener('click',e=>{if(e.target.matches('[data-modal-close="bulk"]')||e.target===$('#bulk-modal'))closeModal('bulk')});
 addEventListener('keydown',e=>{if(e.key==='Escape'){['health','merge','bulk','gist'].forEach(closeModal)}});
@@ -1420,10 +1457,14 @@ addEventListener('dragover',e=>e.preventDefault());
 addEventListener('drop',e=>{e.preventDefault();clearSvgDrop();{const files=[...e.dataTransfer.files],card=e.target.closest&&e.target.closest('.card'),svg=files.find(isSvgFile);if(card&&svg&&!files.some(x=>/\.json$/i.test(x.name)||x.type==='application/json')){uploadSvgToFilter(S.filters[+card.dataset.i],svg);return}}const f=[...e.dataTransfer.files].find(x=>/\.json$/i.test(x.name)||x.type==='application/json');if(!f){toast('Drop a Nuvio/Fusion JSON file to open it');return}f.text().then(t=>load(t,f.name)).catch(err=>alert('Could not read JSON: '+err.message))});
 
 function out(){const clean=v=>typeof v==='string'?v.trim().replace(/^#+/,'#'):v;
- const groups=S.groups.map(groupRecord);
- const filterKeys=['id','groupId','name','pattern','imageURL','isEnabled','tagColor','tagStyle','textColor','borderColor'];
- const filters=sortedFilters().map(f=>{const x={};filterKeys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(f,k))x[k]=clean(f[k])});Object.keys(f).forEach(k=>{if(!filterKeys.includes(k)&&k!=='type')x[k]=f[k]});return x});
- const o={groups,filters};Object.keys(S.extra||{}).forEach(k=>{if(k!=='groups'&&k!=='filters')o[k]=S.extra[k]});return JSON.stringify(o,null,2)}
+  const groups=S.groups.map(groupRecord);
+  const filters=sortedFilters().map(f=>{
+   const x={},put=k=>{if(Object.prototype.hasOwnProperty.call(f,k))x[k]=clean(f[k])};
+   put('id');put('groupId');put('name');put('pattern');put('imageURL');put('isEnabled');put('tagColor');put('tagStyle');
+   if(!f.svgPreserveOriginal)put('textColor');
+   put('borderColor');return x;
+  });
+  return JSON.stringify({groups,filters},null,2)}
 function scanHealth(){
  const issues=[],filterIds=new Map(),groupIds=new Map(),validGroups=new Set(S.groups.map(g=>String(g.id||'').trim()).filter(Boolean));
  const add=(severity,title,detail)=>issues.push({severity,title,detail});
@@ -1590,7 +1631,8 @@ function resetHistory(){HS=[];HI=-1;commit()}
 function hist(d){const j=HI+d;if(j<0||j>=HS.length)return;HI=j;const o=JSON.parse(HS[j]);S={filters:o.f,groups:(o.g||[]).map(groupRecord),extra:o.e,hg:o.h};render(true);auto()}
 $('#undo').onclick=()=>hist(-1);$('#redo').onclick=()=>hist(1);
 addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();hist(e.shiftKey?1:-1)}});
-function ap(f,k){const o=PRE[k](f);Object.assign(f,o);if(o.textColor!==undefined&&typeof scheduleTextColor==='function')scheduleTextColor(f)}
+function ap(f,k){const o=PRE[k](f);Object.assign(f,o);if(Object.prototype.hasOwnProperty.call(o,'imageURL')&&!f.svgSourceURL&&isSvgDataUrl(f.imageURL))f.svgSourceURL=f.imageURL;
+  if(o.textColor!==undefined||o.svgPreserveOriginal!==undefined||o.imageURL!==undefined){if(f.svgPreserveOriginal)applyPreserveMode(f);else if(o.textColor!==undefined&&typeof scheduleTextColor==='function')scheduleTextColor(f)}}
 function chkUI(){const missing=S.filters.filter(f=>f.isEnabled!==false&&!String(f.imageURL||'').trim());const el=$('#issues');el.innerHTML='';if(!missing.length)return;
  const d=document.createElement('div');d.className='warn';d.innerHTML=ic('alert')+'<span>'+missing.length+' enabled badge(s) have no image URL and may not render.</span>';el.append(d)}
 $('#q').oninput=()=>render(true);
@@ -1600,7 +1642,7 @@ const th=t=>{document.documentElement.dataset.theme=t;try{localStorage.setItem('
 th((()=>{try{return localStorage.getItem('nbl-theme')}catch(_){}})()||(window.matchMedia&&matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'));
 $('#th').onclick=()=>th(document.documentElement.dataset.theme==='light'?'dark':'light');
 $('#header-menu').addEventListener('click',e=>{if(e.target.closest('button'))$('#header-menu').open=false});
-try{const r=JSON.parse(localStorage.getItem('nbl-session')||'null');if(r){const o=JSON.parse(r.s);if(o.f&&o.f.length){S={filters:o.f,groups:(o.g||[]).map(groupRecord),extra:o.e,hg:o.h};fname=r.n||fname;setTimeout(async()=>{const seq=++LOAD_SEQ;const st=await processImportedSvgs(S.filters,seq);if(st.embedded||st.failed){render();commit()}syncGlobalSvgColorFromFilters();updateGlobalSvgUI();toast('Restored session'+(st.embedded?' · '+st.embedded+' SVGs embedded':'')+(st.failed?' · '+st.failed+' SVGs need attention':''))},300)}}}catch(_){}
+try{const r=JSON.parse(localStorage.getItem('nbl-session')||'null');if(r){const o=JSON.parse(r.s);if(o.f&&o.f.length){o.f.forEach(f=>{f.svgPreserveOriginal=f.svgPreserveOriginal===true||!hasBadgeTextColor(f);if(typeof f.svgSourceURL!=='string')f.svgSourceURL=''});S={filters:o.f,groups:(o.g||[]).map(groupRecord),extra:o.e,hg:o.h};fname=r.n||fname;setTimeout(async()=>{const seq=++LOAD_SEQ;const st=await processImportedSvgs(S.filters,seq);if(st.embedded||st.failed){render();commit()}syncGlobalSvgColorFromFilters();updateGlobalSvgUI();toast('Restored session'+(st.embedded?' · '+st.embedded+' SVGs embedded':'')+(st.failed?' · '+st.failed+' SVGs need attention':''))},300)}}}catch(_){}
 const hh=()=>document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');
 addEventListener('resize',hh);hh();
 const CA=['fill','stroke','stop-color','flood-color','lighting-color'];
@@ -1660,31 +1702,45 @@ async function fetchSvgText(url){let parsed;try{parsed=new URL(url,location.href
   const txt=new TextDecoder('utf-8',{fatal:true}).decode(bytes);const doc=svgParse(txt);if(!doc)throw Error('Response is not a valid supported SVG');return new XMLSerializer().serializeToString(doc)
  }catch(e){if(e.name==='AbortError')throw Error('Timed out after 10 seconds');if(e instanceof TypeError)throw Error('Fetch blocked by CORS or network policy');throw e}finally{clearTimeout(timer)}}
 async function mapLimit(items,limit,fn){let next=0;const out=new Array(items.length);await Promise.all(Array.from({length:Math.min(limit,items.length)},async()=>{while(true){const i=next++;if(i>=items.length)return;out[i]=await fn(items[i])}}));return out}
-function applySvgTextColor(xml,color){const d=svgParse(xml);if(!d)throw Error('SVG sanitization failed');if(color&&!parse(color).bad)recolorSvgDoc(d,color);return new XMLSerializer().serializeToString(d)}
-async function processImportedSvgs(filters,seq){const stats={embedded:0,recolored:0,failed:0},remote=[];let total=0;
- for(const f of filters){const u=String(f.imageURL||'').trim();if(isSvgDataUrl(u)){try{const clean=applySvgTextColor(decodeSvgDataUrl(u),f.textColor);const next=encodeSvgDataUrl(clean);if(next!==u){f.imageURL=next;stats.embedded++}if(f.textColor&&!parse(f.textColor).bad)stats.recolored++ ;SVG_ERRORS.delete(f)}catch(e){SVG_ERRORS.set(f,'Embedded SVG could not be processed: '+e.message);stats.failed++}}
-  else if(isSvgUrl(u))remote.push([f,u])}
- let finished=0;await mapLimit(remote,8,async([f,url])=>{try{const xml=await fetchSvgText(url);if(seq!==LOAD_SEQ||f.imageURL!==url)return;
-   const byteCount=new TextEncoder().encode(xml).length;if(total+byteCount>20*1024*1024)throw Error('Total embedded SVG data would exceed 20 MB');total+=byteCount;
-   const colored=applySvgTextColor(xml,f.textColor);f.imageURL=encodeSvgDataUrl(colored);SVG_ERRORS.delete(f);stats.embedded++;if(f.textColor&&!parse(f.textColor).bad)stats.recolored++
-  }catch(e){if(seq!==LOAD_SEQ)return;SVG_ERRORS.set(f,'SVG not embedded: '+e.message+' · original URL retained');stats.failed++}finally{finished++;if(seq===LOAD_SEQ&&$('#setup'))$('#setup').textContent='Embedding SVGs · '+finished+' / '+remote.length+' checked…'}});
- return stats}
-async function embedOneFilter(f){const url=String(f.imageURL||'').trim();if(!isSvgUrl(url))return;try{const xml=await fetchSvgText(url);if(f.imageURL!==url)return;const colored=applySvgTextColor(xml,f.textColor);f.imageURL=encodeSvgDataUrl(colored);SVG_ERRORS.delete(f);const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');if(card){card.querySelector('.pvw').replaceChildren(chip(f));imgRow(card,f)}stage();commit();toast('SVG embedded and artwork color applied')}catch(e){SVG_ERRORS.set(f,'SVG not embedded: '+e.message+' · original URL retained');const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');if(card)imgRow(card,f);toast('Could not embed SVG: '+e.message)}}
-function applyTextColorToFilter(f){const u=String(f.imageURL||'');if(!isSvgDataUrl(u))return false;try{const xml=decodeSvgDataUrl(u),colored=applySvgTextColor(xml,f.textColor);f.imageURL=encodeSvgDataUrl(colored);SVG_ERRORS.delete(f);return true}catch(e){SVG_ERRORS.set(f,'SVG artwork color could not be applied: '+e.message);return false}}
+function renderSvgForFilter(f,xml,colorOverride){
+  const d=svgParse(xml);if(!d)throw Error('SVG sanitization failed');
+  const clean=new XMLSerializer().serializeToString(d);
+  if(!f.svgSourceURL&&isSvgDataUrl(f.imageURL))f.svgSourceURL=f.imageURL;
+  if(!f.svgSourceURL)f.svgSourceURL=encodeSvgDataUrl(clean);
+  if(f.svgPreserveOriginal)return clean;
+  const color=colorOverride===undefined?f.textColor:colorOverride;
+  if(color&&!parse(color).bad)recolorSvgDoc(d,color);
+  return new XMLSerializer().serializeToString(d);
+}
+function svgSourceXml(f){const src=String(f.svgSourceURL||'').trim();if(isSvgDataUrl(src))return decodeSvgDataUrl(src);const u=String(f.imageURL||'').trim();return isSvgDataUrl(u)?decodeSvgDataUrl(u):null}
+function applySvgForFilter(f,xml,colorOverride){const out=renderSvgForFilter(f,xml,colorOverride);f.imageURL=encodeSvgDataUrl(out);SVG_ERRORS.delete(f);return true}
+function applyPreserveMode(f){const xml=svgSourceXml(f);return xml?applySvgForFilter(f,xml):false}
+async function processImportedSvgs(filters,seq){const stats={embedded:0,recolored:0,preserved:0,failed:0},remote=[];let total=0;
+  for(const f of filters){const u=String(f.imageURL||'').trim();if(isSvgDataUrl(u)){try{const src=svgSourceXml(f)||decodeSvgDataUrl(u);const next=encodeSvgDataUrl(renderSvgForFilter(f,src));if(next!==u){f.imageURL=next;stats.embedded++}if(f.svgPreserveOriginal)stats.preserved++;else if(f.textColor&&!parse(f.textColor).bad)stats.recolored++;SVG_ERRORS.delete(f)}catch(e){SVG_ERRORS.set(f,'Embedded SVG could not be processed: '+e.message);stats.failed++}}
+   else if(isSvgUrl(u))remote.push([f,u])}
+  let finished=0;await mapLimit(remote,8,async([f,url])=>{try{const xml=await fetchSvgText(url);if(seq!==LOAD_SEQ||f.imageURL!==url)return;
+    const byteCount=new TextEncoder().encode(xml).length;if(total+byteCount>20*1024*1024)throw Error('Total embedded SVG data would exceed 20 MB');total+=byteCount;
+    applySvgForFilter(f,xml);stats.embedded++;if(f.svgPreserveOriginal)stats.preserved++;else if(f.textColor&&!parse(f.textColor).bad)stats.recolored++
+   }catch(e){if(seq!==LOAD_SEQ)return;SVG_ERRORS.set(f,'SVG not embedded: '+e.message+' · original URL retained');stats.failed++}finally{finished++;if(seq===LOAD_SEQ&&$('#setup'))$('#setup').textContent='Embedding SVGs · '+finished+' / '+remote.length+' checked…'}});
+  return stats}
+async function embedOneFilter(f){const url=String(f.imageURL||'').trim();if(!isSvgUrl(url))return;try{const xml=await fetchSvgText(url);if(f.imageURL!==url)return;applySvgForFilter(f,xml);const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');if(card){card.querySelector('.pvw').replaceChildren(chip(f));imgRow(card,f)}stage();commit();toast(f.svgPreserveOriginal?'SVG embedded with original colors preserved':'SVG embedded and artwork color applied')}catch(e){SVG_ERRORS.set(f,'SVG not embedded: '+e.message+' · original URL retained');const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');if(card)imgRow(card,f);toast('Could not embed SVG: '+e.message)}}
+function applyTextColorToFilter(f){if(!isSvgDataUrl(f.imageURL)&&!isSvgDataUrl(f.svgSourceURL))return false;try{const xml=svgSourceXml(f);if(!xml)return false;applySvgForFilter(f,xml);return true}catch(e){SVG_ERRORS.set(f,'SVG artwork color could not be applied: '+e.message);return false}}
 function scheduleTextColor(f){clearTimeout(TEXT_COLOR_TIMERS.get(f));TEXT_COLOR_TIMERS.set(f,setTimeout(()=>{if(applyTextColorToFilter(f)){const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');if(card){card.querySelector('.pvw').replaceChildren(chip(f));imgRow(card,f)}stage();commit()}else if(isSvgUrl(f.imageURL)){embedOneFilter(f)}},110))}
 
 let GLOBAL_RECOLORING=false;
-const isSvgFilter=f=>isSvgDataUrl(f.imageURL)||isSvgUrl(f.imageURL);
+const isSvgFilter=f=>isSvgDataUrl(f.imageURL)||isSvgUrl(f.imageURL)||isSvgDataUrl(f.svgSourceURL);
 function globalSvgTargets(){return S.filters.filter(isSvgFilter)}
+function globalRecolorTargets(){return globalSvgTargets().filter(f=>!f.svgPreserveOriginal)}
 function globalColorValue(){const p=parse($('#global-svg-hex').value);return p.bad?null:mk(p.rgb,p.a)}
 function setGlobalColorInputs(value){const p=parse(value);if(p.bad)return;$('#global-svg-color').value='#'+p.rgb.toLowerCase();$('#global-svg-alpha').value=p.a;$('#global-svg-hex').value=mk(p.rgb,p.a);$('#global-svg-alpha-label').textContent=Math.round(p.a/2.55)+'%'}
-function updateGlobalSvgUI(){const targets=globalSvgTargets(),embedded=targets.filter(f=>isSvgDataUrl(f.imageURL)).length,linked=targets.length-embedded;
- $('#global-svg-count').textContent=targets.length;$('#global-svg-breakdown').textContent=embedded+' embedded · '+linked+' linked';
- $('#global-svg-apply').disabled=!targets.length||GLOBAL_RECOLORING||IMPORT_EMBEDDING||parse($('#global-svg-hex').value).bad;
- if(!targets.length&&!GLOBAL_RECOLORING)$('#global-svg-status').textContent=S.filters.length?'No SVG image URLs detected. Raster images are left unchanged.':'SVG artwork only · raster images are skipped.';
- else if(targets.length&&!GLOBAL_RECOLORING&&$('#global-svg-status').dataset.kind!=='custom')$('#global-svg-status').textContent='Ready to recolor '+targets.length+' SVG badge'+(targets.length===1?'':'s')+'. Linked SVGs will be fetched and embedded if CORS allows.';
+function updateGlobalSvgUI(){const targets=globalSvgTargets(),recolorTargets=globalRecolorTargets(),embedded=targets.filter(f=>isSvgDataUrl(f.imageURL)||isSvgDataUrl(f.svgSourceURL)).length,linked=targets.length-embedded,preserved=targets.length-recolorTargets.length;
+  $('#global-svg-count').textContent=targets.length;$('#global-svg-breakdown').textContent=embedded+' embedded · '+linked+' linked'+(preserved?' · '+preserved+' preserved':'');
+  $('#global-svg-apply').disabled=!recolorTargets.length||GLOBAL_RECOLORING||IMPORT_EMBEDDING||parse($('#global-svg-hex').value).bad;
+  if(!targets.length&&!GLOBAL_RECOLORING)$('#global-svg-status').textContent=S.filters.length?'No SVG image URLs detected. Raster images are left unchanged.':'SVG artwork only · raster images are skipped.';
+  else if(!recolorTargets.length&&!GLOBAL_RECOLORING&&$('#global-svg-status').dataset.kind!=='custom')$('#global-svg-status').textContent=targets.length+' SVG badge'+(targets.length===1?' is':'s are')+' preserving original colors. Recolor all SVGs will skip them.';
+  else if(recolorTargets.length&&!GLOBAL_RECOLORING&&$('#global-svg-status').dataset.kind!=='custom')$('#global-svg-status').textContent='Ready to recolor '+recolorTargets.length+' SVG badge'+(recolorTargets.length===1?'':'s')+(preserved?' · '+preserved+' preserved SVG'+(preserved===1?' is':'s are')+' skipped':'')+'. Linked SVGs will be fetched and embedded if CORS allows.';
 }
-function syncGlobalSvgColorFromFilters(){const vals=globalSvgTargets().map(f=>String(f.textColor||'')).filter(v=>!parse(v).bad).map(v=>{const p=parse(v);return mk(p.rgb,p.a)});const unique=[...new Set(vals)];
+function syncGlobalSvgColorFromFilters(){const vals=globalRecolorTargets().map(f=>String(f.textColor||'')).filter(v=>!parse(v).bad).map(v=>{const p=parse(v);return mk(p.rgb,p.a)});const unique=[...new Set(vals)];
  if(unique.length===1){setGlobalColorInputs(unique[0]);$('#global-svg-status').dataset.kind='';$('#global-svg-status').textContent='Current SVG artwork color: '+unique[0]+'.'}
  else if(unique.length>1){$('#global-svg-status').dataset.kind='mixed';$('#global-svg-status').textContent='The SVG badges currently use different artwork colors. Apply one color below to unify them.'}
  updateGlobalSvgUI()}
@@ -1696,17 +1752,17 @@ $('#global-svg-color').addEventListener('input',()=>handleGlobalColorInput('pick
 $('#global-svg-alpha').addEventListener('input',()=>handleGlobalColorInput('alpha'));
 $('#global-svg-hex').addEventListener('input',()=>{const p=parse($('#global-svg-hex').value);if(p.bad){$('#global-svg-apply').disabled=true;$('#global-svg-status').dataset.kind='custom';$('#global-svg-status').textContent='Enter a valid #RRGGBB or #AARRGGBB color.';return}handleGlobalColorInput('hex')});
 $('#global-svg-apply').addEventListener('click',async()=>{
- if(GLOBAL_RECOLORING||IMPORT_EMBEDDING)return;const targets=globalSvgTargets(),color=globalColorValue();if(!targets.length){toast('No SVG badges found');return}if(!color||parse(color).bad){toast('Enter a valid #RRGGBB or #AARRGGBB color');return}
- GLOBAL_RECOLORING=true;const btn=$('#global-svg-apply'),status=$('#global-svg-status');btn.disabled=true;btn.textContent='Recoloring…';status.dataset.kind='custom';status.textContent='Recoloring '+targets.length+' SVG badges…';
- let done=0,failed=0,totalBytes=0;const results=await mapLimit(targets,4,async f=>{const original=String(f.imageURL||'');try{
-   let xml;if(isSvgDataUrl(original))xml=decodeSvgDataUrl(original);else if(isSvgUrl(original))xml=await fetchSvgText(original);else throw Error('Image is no longer an SVG');
-   if(String(f.imageURL||'')!==original)throw Error('Image URL changed while recoloring');
-   const colored=applySvgTextColor(xml,color),bytes=new TextEncoder().encode(colored);if(totalBytes+bytes.length>20*1024*1024)throw Error('Global embedded SVG limit is 20 MB');totalBytes+=bytes.length;
-   f.imageURL=encodeSvgDataUrl(colored);f.textColor=color;SVG_ERRORS.delete(f);done++;return true;
-  }catch(e){if(String(f.imageURL||'')===original)SVG_ERRORS.set(f,'Global recolor failed: '+e.message+' · original image kept');failed++;return false}});
- GLOBAL_RECOLORING=false;render();commit();syncGlobalSvgColorFromFilters();
- btn.textContent='Recolor all SVGs';updateGlobalSvgUI();status.dataset.kind=failed?'mixed':'success';status.textContent=done+' SVG'+(done===1?'':'s')+' recolored and embedded'+(failed?' · '+failed+' could not be fetched or processed; original images were preserved.':' successfully.');
- toast(done+' recolored'+(failed?' · '+failed+' skipped':''));
+  if(GLOBAL_RECOLORING||IMPORT_EMBEDDING)return;const targets=globalRecolorTargets(),color=globalColorValue(),skipped=globalSvgTargets().length-targets.length;if(!targets.length){toast('No recolorable SVGs found. Preserved SVGs are skipped.');return}if(!color||parse(color).bad){toast('Enter a valid #RRGGBB or #AARRGGBB color');return}
+  GLOBAL_RECOLORING=true;const btn=$('#global-svg-apply'),status=$('#global-svg-status');btn.disabled=true;btn.textContent='Recoloring…';status.dataset.kind='custom';status.textContent='Recoloring '+targets.length+' SVG badges'+(skipped?' · '+skipped+' preserved skipped':'')+'…';
+  let done=0,failed=0,totalBytes=0;const results=await mapLimit(targets,4,async f=>{const original=String(f.imageURL||'');try{
+    let xml;if(isSvgDataUrl(f.svgSourceURL))xml=decodeSvgDataUrl(f.svgSourceURL);else if(isSvgDataUrl(original))xml=decodeSvgDataUrl(original);else if(isSvgUrl(original))xml=await fetchSvgText(original);else throw Error('Image is no longer an SVG');
+    if(String(f.imageURL||'')!==original)throw Error('Image URL changed while recoloring');
+    applySvgForFilter(f,xml,color);const bytes=new TextEncoder().encode(f.imageURL).length;if(totalBytes+bytes.length>20*1024*1024)throw Error('Global embedded SVG limit is 20 MB');totalBytes+=bytes.length;
+    f.textColor=color;done++;return true;
+   }catch(e){if(String(f.imageURL||'')===original)SVG_ERRORS.set(f,'Global recolor failed: '+e.message+' · original image kept');failed++;return false}});
+  GLOBAL_RECOLORING=false;render();commit();syncGlobalSvgColorFromFilters();
+  btn.textContent='Recolor all SVGs';updateGlobalSvgUI();status.dataset.kind=failed?'mixed':'success';status.textContent=done+' SVG'+(done===1?'':'s')+' recolored and embedded'+(skipped?' · '+skipped+' preserved SVG'+(skipped===1?' was':'s were')+' skipped':'')+(failed?' · '+failed+' could not be fetched or processed; original images were preserved.':' successfully.');
+  toast(done+' recolored'+(skipped?' · '+skipped+' preserved skipped':'')+(failed?' · '+failed+' skipped':''));
 });
 
 /* ---- Upload local SVG → sanitized base64 data URL ---- */
@@ -1721,11 +1777,12 @@ async function uploadSvgToFilter(f,file){
  if(file.size>SVG_UPLOAD_MAX){toast('SVG exceeds the 2 MB limit');return}
  try{
   let txt;try{txt=new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer()).replace(/^\uFEFF/,'')}catch(_){throw Error('File could not be read as UTF-8 text')}
-  const doc=svgParse(txt);if(!doc)throw Error('Not a valid SVG (or it uses unsupported content)');
-  if(f.textColor&&!parse(f.textColor).bad)recolorSvgDoc(doc,f.textColor);
-  const clean=new XMLSerializer().serializeToString(doc),dataUrl=encodeSvgDataUrl(clean);
-  if(S.filters.indexOf(f)<0)return;
-  f.imageURL=dataUrl;SVG_ERRORS.delete(f);
+   const doc=svgParse(txt);if(!doc)throw Error('Not a valid SVG (or it uses unsupported content)');
+   const source=new XMLSerializer().serializeToString(doc);
+   f.svgSourceURL=encodeSvgDataUrl(source);
+   const dataUrl=encodeSvgDataUrl(renderSvgForFilter(f,source));
+   if(S.filters.indexOf(f)<0)return;
+   f.imageURL=dataUrl;SVG_ERRORS.delete(f);
   const i=S.filters.indexOf(f),card=document.querySelector('.card[data-i="'+i+'"]');
   if(card){const inp=card.querySelector('input[data-k="imageURL"]');if(inp)inp.value=dataUrl;card.querySelector('.pvw').replaceChildren(chip(f));imgRow(card,f)}
   stage();chkUI();updateGlobalSvgUI();commit();
