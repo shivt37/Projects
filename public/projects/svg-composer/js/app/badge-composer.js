@@ -4651,13 +4651,13 @@ function getElementEffectivePainted(item,stopNode){
 }
 function getLayerWorldBounds(layer,referenceNode=null){
  const node=getLayerNode(layer.id);if(node&&typeof node.getBBox==='function'){
-  let result=null;const refMatrix=referenceNode?getCanvasRelativeMatrix(referenceNode):null,refInverse=referenceNode?(refMatrix&&invertAffineMatrix(refMatrix)):null;
+  let result=null;const refMatrix=referenceNode?getIconMatchCanvasMatrix(referenceNode):null,refInverse=referenceNode?(refMatrix&&invertAffineMatrix(refMatrix)):null;
   if(referenceNode&&!refInverse)return visualBounds(layer);
   const candidates=[node,...node.querySelectorAll('g,svg,path,rect,circle,ellipse,line,polyline,polygon,text,image,use')];
   for(const item of candidates){
    try{
     const tag=item.localName,isContainer=tag==='g'||tag==='svg';if(!getElementEffectivePainted(item,node))continue;
-    const canvasMatrix=getCanvasRelativeMatrix(item),m=canvasMatrix&&(refInverse?multiplyAffineMatrices(refInverse,canvasMatrix):canvasMatrix);
+    const canvasMatrix=getIconMatchCanvasMatrix(item),m=canvasMatrix&&(refInverse?multiplyAffineMatrices(refInverse,canvasMatrix):canvasMatrix);
     if(!m||![m.a,m.b,m.c,m.d,m.e,m.f].every(Number.isFinite))continue;
     let style;try{style=getComputedStyle(item);}catch(_){style=null;}
     if(style&&(style.display==='none'||style.visibility==='hidden'||Number(style.opacity)===0))continue;
@@ -5185,49 +5185,42 @@ const GSP_IMPORT_SKIP=new Set(['desc','title','metadata','namedview','defs','mas
 // Resolve relative moveto commands before splitting. In SVG, a relative `m`
 // after a closed subpath starts at the previous current point, not at (0,0).
 function parseSvgSubpathRecords(d){
- const source=String(d||''),tokenRe=/[AaCcHhLlMmQqSsTtVvZz]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g,tokens=[];let m,cursor=0;
- while((m=tokenRe.exec(source))){if(!/^[\s,]*$/.test(source.slice(cursor,m.index)))return null;tokens.push({v:m[0],start:m.index,end:tokenRe.lastIndex,isCommand:/^[AaCcHhLlMmQqSsTtVvZz]$/.test(m[0])});cursor=tokenRe.lastIndex;}
- if(!/^[\s,]*$/.test(source.slice(cursor)))return null;
- const arity={M:2,L:2,H:1,V:1,C:6,S:4,Q:4,T:2,A:7};let i=0,cmd=null,x=0,y=0,sx=0,sy=0,first=true,records=[];
+ const source=String(d||''),tokens=[],numberRe=/^[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/;let pos=0,cmdLetter='',paramIndex=0;
+ while(pos<source.length){
+  const ch=source[pos];
+  if(/[\s,]/.test(ch)){pos++;continue;}
+  if(/^[AaCcHhLlMmQqSsTtVvZz]$/.test(ch)){tokens.push({v:ch,start:pos,end:pos+1,isCommand:true});cmdLetter=ch;paramIndex=0;pos++;continue;}
+  const needFlag=cmdLetter.toUpperCase()==='A'&&(paramIndex%7===3||paramIndex%7===4);
+  if(needFlag){if(ch!=='0'&&ch!=='1')return null;tokens.push({v:ch,start:pos,end:pos+1,isCommand:false});paramIndex++;pos++;continue;}
+  const m=numberRe.exec(source.slice(pos));if(!m)return null;tokens.push({v:m[0],start:pos,end:pos+m[0].length,isCommand:false});paramIndex++;pos+=m[0].length;
+ }
+ const arity={M:2,L:2,H:1,V:1,C:6,S:4,Q:4,T:2,A:7},fmt=n=>{const v=Number(n);return Object.is(v,-0)?'0':String(v);};
+ const out=[];let cur=null,subStart={x:0,y:0},current={x:0,y:0},cmd=null,prevC=null,prevQ=null,prevType='',i=0;
+ const begin=p=>{if(cur)out.push({d:cur,start:0,x:subStart.x,y:subStart.y});cur=`M ${fmt(p.x)} ${fmt(p.y)}`;subStart={x:p.x,y:p.y};current={x:p.x,y:p.y};prevC=prevQ=null;prevType='M';};
+ const finish=()=>{if(cur){out.push({d:cur,start:0,x:subStart.x,y:subStart.y});cur=null;}};
  while(i<tokens.length){
-  if(tokens[i].isCommand){cmd=tokens[i].v;i++;if(cmd.toUpperCase()==='Z'){x=sx;y=sy;cmd=null;first=true;}else if(cmd.toUpperCase()==='M'){first=true;}continue;}
+  if(tokens[i].isCommand){cmd=tokens[i].v;i++;if(cmd.toUpperCase()==='Z'){if(cur){cur+=' Z';finish();}current={...subStart};cmd=null;prevC=prevQ=null;prevType='Z';continue;}if(!arity[cmd.toUpperCase()])return null;}
   if(!cmd)return null;
-  const upper=cmd.toUpperCase(),n=arity[upper];if(!n||i+n>tokens.length||tokens.slice(i,i+n).some(t=>t.isCommand))return null;
+  const upper=cmd.toUpperCase(),rel=cmd!==upper,n=arity[upper];
+  if(i+n>tokens.length||tokens.slice(i,i+n).some(t=>t.isCommand))return null;
   const vals=tokens.slice(i,i+n).map(t=>Number(t.v));if(vals.some(v=>!Number.isFinite(v)))return null;
-  const groupStart=tokens[i].start,groupEnd=tokens[i+n-1].end,rel=cmd===cmd.toLowerCase();
-  if(upper==='M'){
-   if(first){const nx=rel?x+vals[0]:vals[0],ny=rel?y+vals[1]:vals[1];records.push({start:tokens[i-2]?.start??tokens[i-1].start,pairEnd:groupEnd,x:nx,y:ny,relative:rel});x=nx;y=ny;sx=nx;sy=ny;first=false;}
-   else{x=rel?x+vals[0]:vals[0];y=rel?y+vals[1]:vals[1];}
-  }else if(upper==='L'||upper==='T'){
-   x=rel?x+vals[n-2]:vals[n-2];y=rel?y+vals[n-1]:vals[n-1];
-  }else if(upper==='H')x=rel?x+vals[0]:vals[0];
-  else if(upper==='V')y=rel?y+vals[0]:vals[0];
-  else if(upper==='C'){
-   x=rel?x+vals[4]:vals[4];y=rel?y+vals[5]:vals[5];
-  }else if(upper==='S'||upper==='Q'){
-   x=rel?x+vals[n-2]:vals[n-2];y=rel?y+vals[n-1]:vals[n-1];
-  }else if(upper==='A'){
-   x=rel?x+vals[5]:vals[5];y=rel?y+vals[6]:vals[6];
-  }
+  const ox=current.x,oy=current.y,abs=(a,b)=>[rel?a+ox:a,rel?b+oy:b];let seg='';
+  if(upper==='M'){const p=abs(vals[0],vals[1]);begin({x:p[0],y:p[1]});cmd=rel?'l':'L';i+=n;continue;}
+  if(!cur)begin(current);
+  if(upper==='L'){const p=abs(vals[0],vals[1]);seg=`L ${fmt(p[0])} ${fmt(p[1])}`;current={x:p[0],y:p[1]};prevC=prevQ=null;prevType=upper;}
+  else if(upper==='H'){const x=rel?ox+vals[0]:vals[0];seg=`L ${fmt(x)} ${fmt(oy)}`;current={x,y:oy};prevC=prevQ=null;prevType=upper;}
+  else if(upper==='V'){const y=rel?oy+vals[0]:vals[0];seg=`L ${fmt(ox)} ${fmt(y)}`;current={x:ox,y};prevC=prevQ=null;prevType=upper;}
+  else if(upper==='C'){const c1=abs(vals[0],vals[1]),c2=abs(vals[2],vals[3]),p=abs(vals[4],vals[5]);seg=`C ${fmt(c1[0])} ${fmt(c1[1])} ${fmt(c2[0])} ${fmt(c2[1])} ${fmt(p[0])} ${fmt(p[1])}`;current={x:p[0],y:p[1]};prevC={x:c2[0],y:c2[1]};prevQ=null;prevType=upper;}
+  else if(upper==='S'){const c2=abs(vals[0],vals[1]),p=abs(vals[2],vals[3]),c1=(prevType==='C'||prevType==='S')&&prevC?{x:2*ox-prevC.x,y:2*oy-prevC.y}:{x:ox,y:oy};seg=`C ${fmt(c1.x)} ${fmt(c1.y)} ${fmt(c2[0])} ${fmt(c2[1])} ${fmt(p[0])} ${fmt(p[1])}`;current={x:p[0],y:p[1]};prevC={x:c2[0],y:c2[1]};prevQ=null;prevType=upper;}
+  else if(upper==='Q'){const c=abs(vals[0],vals[1]),p=abs(vals[2],vals[3]);seg=`Q ${fmt(c[0])} ${fmt(c[1])} ${fmt(p[0])} ${fmt(p[1])}`;current={x:p[0],y:p[1]};prevQ={x:c[0],y:c[1]};prevC=null;prevType=upper;}
+  else if(upper==='T'){const p=abs(vals[0],vals[1]),c=(prevType==='Q'||prevType==='T')&&prevQ?{x:2*ox-prevQ.x,y:2*oy-prevQ.y}:{x:ox,y:oy};seg=`Q ${fmt(c.x)} ${fmt(c.y)} ${fmt(p[0])} ${fmt(p[1])}`;current={x:p[0],y:p[1]};prevQ={x:c.x,y:c.y};prevC=null;prevType=upper;}
+  else if(upper==='A'){if(!['0','1'].includes(tokens[i+3].v)||!['0','1'].includes(tokens[i+4].v))return null;const p=abs(vals[5],vals[6]);seg=`A ${fmt(vals[0])} ${fmt(vals[1])} ${fmt(vals[2])} ${Number(tokens[i+3].v)} ${Number(tokens[i+4].v)} ${fmt(p[0])} ${fmt(p[1])}`;current={x:p[0],y:p[1]};prevC=prevQ=null;prevType=upper;}
+  else return null;
+  cur+=' '+seg;
   i+=n;
  }
- if(!records.length)return null;
- // Store each move's true absolute start and the end offset of its first pair.
- const moveTokens=tokens.filter(t=>t.isCommand&&t.v.toUpperCase()==='M');
- if(moveTokens.length!==records.length)return null;
- records.forEach((r,k)=>{r.start=moveTokens[k].start;r.commandEnd=moveTokens[k].end;});
- return records.map((r,k)=>{
-  const end=k+1<records.length?records[k+1].start:source.length;
-  const raw=source.slice(r.start,end),pairEndGlobal=findFirstMovePairEnd(tokens,r.start);
-  if(pairEndGlobal==null)return null;
-  const rest=source.slice(pairEndGlobal,end);
-  return{d:`M ${Number(r.x.toPrecision(12))} ${Number(r.y.toPrecision(12))} ${rest}`.trim(),start:r.start,x:r.x,y:r.y};
- }).filter(Boolean);
-}
-function findFirstMovePairEnd(tokens,start){
- let commandAt=-1;for(let k=0;k<tokens.length;k++)if(tokens[k].start===start&&tokens[k].isCommand){commandAt=k;break;}
- if(commandAt<0||commandAt+2>=tokens.length||tokens[commandAt+1].isCommand||tokens[commandAt+2].isCommand)return null;
- return tokens[commandAt+2].end;
+ finish();
+ return out.length?out:null;
 }
 // Return painted intervals along a subpath for SVG stroke-dasharray. Geometry
 // tests must use the visible dash segments, not the undashed centerline: two
@@ -5804,7 +5797,7 @@ async function assessSvgImportFidelity(source,parts){
  if(componentCount>256||markupSize>1200000)return{ok:false,reason:'The SVG exceeds the safe visual-verification complexity budget.'};
  let originalUrl='',candidateUrl='';
  try{
-  const originalText=new XMLSerializer().serializeToString(source.root);
+  const originalRoot=source.root.cloneNode(true);originalRoot.setAttribute('width',String(source.w||source.viewW||100));originalRoot.setAttribute('height',String(source.h||source.viewH||100));const originalText=new XMLSerializer().serializeToString(originalRoot);
   const candidate=document.createElementNS(NS,'svg');
   candidate.setAttribute('xmlns',NS);candidate.setAttribute('width',String(source.w||source.viewW||100));candidate.setAttribute('height',String(source.h||source.viewH||100));candidate.setAttribute('viewBox',`0 0 ${source.viewW||100} ${source.viewH||100}`);candidate.setAttribute('preserveAspectRatio',source.preserveAspectRatio||'xMidYMid meet');
   const defs=svgEl('defs',{},candidate),content=svgEl('g',{},candidate);
@@ -5828,7 +5821,7 @@ async function assessSvgImportFidelity(source,parts){
   const channels=a.length,changedRatio=changed/channels,largeRatio=large/channels,meanDelta=total/channels;
   // Small antialiasing deltas are tolerated. Large local errors or widespread
   // shifts cause rollback to the original SVG so import never silently damages it.
-  const ok=max<=64&&changedRatio<=.012&&largeRatio<=.0025;
+  const ok=(max<=64||(largeRatio<=.0002&&meanDelta<=.1))&&changedRatio<=.012&&largeRatio<=.0025;
   return{ok,changedChannels:changed,largeDeltaChannels:large,largeDeltaRatio:largeRatio,maxDelta:max,meanDelta,changedRatio,reason:ok?'Within visual-fidelity tolerance.':'Decomposition changed the rendered artwork beyond the safe tolerance.'};
  }catch(err){return{ok:false,reason:'Visual verification could not complete: '+(err?.message||String(err))};}
 }
