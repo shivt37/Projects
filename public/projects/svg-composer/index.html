@@ -620,9 +620,11 @@
      <label class="bc-export-check"><input type="checkbox" id="bcExportKeepViewBox" checked> Preserve viewBox</label>
      <label class="bc-export-check"><input type="checkbox" id="bcExportKeepIds" checked> Preserve element IDs</label>
      <label class="bc-export-check"><input type="checkbox" id="bcExportKeepA11y" checked> Preserve title &amp; description</label>
-     <label class="bc-export-check"><input type="checkbox" id="bcExportKeepMetadata"> Preserve comments &amp; metadata</label>
-    </div>
-    <p class="bc-export-inline-note" id="bcExportViewBoxNote">Removing viewBox can make an SVG less responsive when scaled. Keep it enabled for reusable vector assets.</p>
+      <label class="bc-export-check"><input type="checkbox" id="bcExportKeepMetadata"> Preserve comments &amp; metadata</label>
+      <label class="bc-export-check"><input type="checkbox" id="bcExportNuvioSafe"> Nuvio-safe flat SVG</label>
+     </div>
+     <p class="bc-export-inline-note" id="bcExportViewBoxNote">Removing viewBox can make an SVG less responsive when scaled. Keep it enabled for reusable vector assets.</p>
+     <p class="bc-export-hint">Nuvio-safe flat SVG keeps the same rendered appearance but removes nested SVG viewports, so badges display correctly in Nuvio/Fusion. It is off by default.</p>
     <p class="bc-export-hint">Optimisation uses SVGO (loaded on demand; internet is required). Conservative preserves path commands; Path precision applies to Balanced and Maximum through SVGO convertPathData. Balanced is recommended; Maximum also converts native shapes to paths and uses multi-pass optimisation. The selected precision is used directly. If SVGO cannot load, switch optimisation off to export the untouched SVG.</p>
    </section>
    <section class="bc-export-card">
