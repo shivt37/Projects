@@ -4955,6 +4955,7 @@ function sanitizeTypographyMetadata(raw){
  if(!['visible','advance','reference'].includes(out.horizontalBasis))out.horizontalBasis='visible';
  return out;
 }
+function svgAttributeHasExternalUrl(value){const urls=[...String(value||'').matchAll(/url\s*\(([^)]*)\)/gi)];return urls.some(m=>!/^\s*(['"]?)#[-\w:.]+\1\s*$/.test(m[1]))}
 function sanitizeSvg(svgText){
  let doc=new DOMParser().parseFromString(svgText,'image/svg+xml');
  if(doc.querySelector('parsererror')||doc.documentElement.localName!=='svg')throw Error('The file is not valid SVG.');
@@ -4998,7 +4999,7 @@ function sanitizeSvg(svgText){
     }else noteOnce('An external link/reference was removed. External resources are not fetched during import.');
     el.removeAttribute(a.name);return;
    }
-   if(/url\s*\(\s*['"]?(?!#)[^)]/i.test(v)){el.removeAttribute(a.name);noteOnce('External CSS/SVG resource URLs were removed; internal #id references are retained.');}
+    if(svgAttributeHasExternalUrl(v)){el.removeAttribute(a.name);noteOnce('External CSS/SVG resource URLs were removed; internal #id references are retained.');}
    if((n==='style'||n==='filter'||n==='fill'||n==='stroke')&&/(?:javascript:|expression\s*\()/i.test(v)){el.removeAttribute(a.name);noteOnce('Unsafe CSS declarations were removed for safety.');}
   });
  });
@@ -5619,6 +5620,22 @@ function createEmbeddedSvgIsland(source,element,inherited={},offsetX=0,offsetY=0
   rootAttrs:{},markup,typography:null,svgImportFallback:true
  });
 }
+function svgGradientInfo(root,paint){
+ const m=/url\(\s*(['"]?)#([^)\s'"]+)\1\s*\)/i.exec(String(paint||''));if(!m)return null;
+ const id=m[2],node=[...(root?.querySelectorAll?.('linearGradient,radialGradient')||[])].find(g=>g.getAttribute('id')===id);if(!node)return null;
+ const type=node.localName.toLowerCase()==='radialgradient'?'radial':'linear';
+ if(node.hasAttribute('gradientTransform')||String(node.getAttribute('gradientUnits')||'').toLowerCase()==='userspaceonuse')return null;
+ const stops=[...node.children].filter(c=>c.localName.toLowerCase()==='stop');if(stops.length!==2)return null;
+ const colors=[],alphas=[];
+ for(const stop of stops){const st=styleMap(stop),color=String(st['stop-color']||stop.getAttribute('stop-color')||'').trim();if(!color||/url\(|currentColor|context-|var\(/i.test(color))return null;colors.push(color);alphas.push(Math.max(0,Math.min(1,svgOpacityNumber(st['stop-opacity'],1))));}
+ let angle=0;
+ if(type==='radial'){if(['cx','cy','r','fx','fy'].some(a=>node.hasAttribute(a)))return null;}
+ else{const pct=(v,d)=>{if(v==null||v==='')return d;const n=parseFloat(String(v));return Number.isFinite(n)?n:null};const x1=pct(node.getAttribute('x1'),0),y1=pct(node.getAttribute('y1'),0),x2=pct(node.getAttribute('x2'),100),y2=pct(node.getAttribute('y2'),0);if([x1,y1,x2,y2].some(v=>v===null))return null;angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI;}
+ return{fillType:type,fill:colors[0],fill2:colors[1],fillAlpha:Math.round(alphas[0]*255),fill2Alpha:Math.round(alphas[1]*255),gradientAngle:Number(angle.toFixed(3))};
+}
+function svgSimpleGradientSupported(root,node){const id=node?.getAttribute?.('id');return !!id&&!!svgGradientInfo(root,`url(#${id})`)}
+function svgDefinitionAllowedForMapping(root,node){const tag=node.localName.toLowerCase();if(['lineargradient','radialgradient'].includes(tag))return svgSimpleGradientSupported(root,node);if(tag==='defs')return [...node.children].every(c=>['title','desc','metadata'].includes(c.localName.toLowerCase())||svgDefinitionAllowedForMapping(root,c));return ['title','desc','metadata'].includes(tag)}
+function svgMappablePaintStyle(root,style,allowGradientMapping){if(!allowGradientMapping||!style)return{style,paint:null};const paint=svgGradientInfo(root,style.fill);if(!paint)return{style,paint:null};return{style:{...style,fill:paint.fill,'paint-order':String(style['paint-order']||'').toLowerCase()==='fill'?undefined:style['paint-order']},paint}}
 function svgElementRequiresIsland(tag,style){
  if(['image','use','symbol','switch','foreignObject','textPath','tspan','svg'].includes(tag))return true;
  const hasUrl=v=>/url\s*\(/i.test(String(v||''));
@@ -5632,16 +5649,18 @@ function svgElementRequiresIsland(tag,style){
 }
 function importedShape(el,offsetX=0,offsetY=0,inherited={},lengthContext={width:100,height:100},importOptions={}){
  if(el.namespaceURI!==NS)return null;
- const tag=el.localName,st=styleMap(el,inherited),tf=parseSvgTransform(st.transform);if(!tf)return null;
+  const tag=el.localName,st=styleMap(el,inherited),tf=parseSvgTransform(st.transform);if(!tf)return null;
+  const mappedPaint=svgMappablePaintStyle(importOptions.source?.root,st,importOptions.allowGradientMapping&&!['g','a'].includes(tag)),paintStyle=mappedPaint.style,gradientPaint=mappedPaint.paint;
  const parentFontSize=Number(lengthContext.parentFontSize)||16*(Number(lengthContext.userUnitsPerCssY)||1),rootRemSize=Number(lengthContext.rootRemSize)||16*(Number(lengthContext.userUnitsPerCssY)||1),computedFontSize=resolveSvgFontSize(el,parentFontSize,rootRemSize,lengthContext);if(computedFontSize===null)return null;
  const computedFontWeight=resolveSvgFontWeight(el,Number(lengthContext.parentFontWeight)||400),ownLetterSpacing=svgDeclaredStyleValue(el,'letter-spacing'),computedLetterSpacing=ownLetterSpacing==null?Number(lengthContext.parentLetterSpacing)||0:resolveSvgLetterSpacing(ownLetterSpacing,computedFontSize,rootRemSize,lengthContext);
  const childLengthContext={...lengthContext,parentFontSize:computedFontSize,rootRemSize,parentFontWeight:computedFontWeight,parentLetterSpacing:computedLetterSpacing};
  if(String(st.display||'').toLowerCase()==='none')return [];
  if(tag!=='g'&&['hidden','collapse'].includes(String(st.visibility||'').toLowerCase()))return [];
  const co=Math.cos(tf.rot*Math.PI/180),si=Math.sin(tf.rot*Math.PI/180),rsx=(px,py)=>co*tf.sx*px+(co*(tf.shear||0)*tf.sx-si*tf.sy)*py,rsy=(px,py)=>si*tf.sx*px+(si*(tf.shear||0)*tf.sx+co*tf.sy)*py;
- const xoff=offsetX+tf.tx,yoff=offsetY+tf.ty,common={x:xoff,y:yoff,rotate:tf.rot,scaleX:tf.sx*100,scaleY:tf.sy*100,fill:resolveImportedSvgPaint(st.fill,st,'#000000'),stroke:resolveImportedSvgPaint(st.stroke,st,'none'),strokeWidth:parseSvgLength(st['stroke-width'],1,'diag',lengthContext),opacity:svgOpacityNumber(st.opacity,1),fillOpacity:svgOpacityNumber(st['fill-opacity'],1),strokeOpacity:svgOpacityNumber(st['stroke-opacity'],1),linecap:st['stroke-linecap']||'butt',linejoin:st['stroke-linejoin']||'miter',strokeMiterlimit:parseSvgLength(st['stroke-miterlimit'],4),strokeDasharray:st['stroke-dasharray']||'none',strokeDashoffset:parseSvgLength(st['stroke-dashoffset'],0,'diag',lengthContext),fillRule:st['fill-rule']||'nonzero',transformSkewX:tf.shear||0};
+  const xoff=offsetX+tf.tx,yoff=offsetY+tf.ty,common={x:xoff,y:yoff,rotate:tf.rot,scaleX:tf.sx*100,scaleY:tf.sy*100,fill:gradientPaint?gradientPaint.fill:resolveImportedSvgPaint(paintStyle.fill,paintStyle,'#000000'),stroke:resolveImportedSvgPaint(paintStyle.stroke,paintStyle,'none'),strokeWidth:parseSvgLength(paintStyle['stroke-width'],1,'diag',lengthContext),opacity:svgOpacityNumber(paintStyle.opacity,1),fillOpacity:svgOpacityNumber(paintStyle['fill-opacity'],1),strokeOpacity:svgOpacityNumber(paintStyle['stroke-opacity'],1),linecap:paintStyle['stroke-linecap']||'butt',linejoin:paintStyle['stroke-linejoin']||'miter',strokeMiterlimit:parseSvgLength(paintStyle['stroke-miterlimit'],4),strokeDasharray:paintStyle['stroke-dasharray']||'none',strokeDashoffset:parseSvgLength(paintStyle['stroke-dashoffset'],0,'diag',lengthContext),fillRule:paintStyle['fill-rule']||'nonzero',transformSkewX:tf.shear||0};
+  if(gradientPaint)Object.assign(common,gradientPaint);
  if(tag==='g'||tag==='a'){
-  if(svgElementRequiresIsland(tag,st))return null;
+  if(svgElementRequiresIsland(tag,paintStyle))return null;
   const children=[],childStyle=Object.fromEntries(Object.entries(st).filter(([k])=>k!=='opacity'&&k!=='transform'));
   for(const child of [...el.children]){
    if(GSP_IMPORT_SKIP.has(child.localName))continue;
@@ -5651,7 +5670,7 @@ function importedShape(el,offsetX=0,offsetY=0,inherited={},lengthContext={width:
   }
   if(!children.length)return [];return makeLayer('group',{...common,name:el.getAttribute('inkscape:label')||el.getAttribute('aria-label')||el.getAttribute('data-name')||el.getAttribute('id')||'Imported group',x:offsetX+tf.tx,y:offsetY+tf.ty,w:100,h:100,children});
  }
- if(svgElementRequiresIsland(tag,st))return null;
+ if(svgElementRequiresIsland(tag,paintStyle))return null;
  if(tag==='path'){
   const d=el.getAttribute('d')||'',baseName=el.getAttribute('inkscape:label')||el.getAttribute('aria-label')||el.getAttribute('data-name')||el.getAttribute('id')||'Imported path';
   const fillVisible=String(common.fill||'none').toLowerCase()!=='none'&&common.fillOpacity>0;
@@ -5690,7 +5709,7 @@ function decomposeSimpleSvg(v,importOptions={}){
  const rootStyleForEffects=styleMap(v.root);
  for(const key of ['clip-path','mask','filter','marker-start','marker-mid','marker-end'])if(rootStyleForEffects[key]&&String(rootStyleForEffects[key]).toLowerCase()!=='none')return null;
  if(rootStyleForEffects['mix-blend-mode']&&String(rootStyleForEffects['mix-blend-mode']).toLowerCase()!=='normal')return null;
- const complexEls=[...v.root.querySelectorAll('defs,mask,filter,clipPath,pattern,linearGradient,radialGradient,marker,symbol')];
+  const complexEls=[...v.root.querySelectorAll('defs,mask,filter,clipPath,pattern,linearGradient,radialGradient,marker,symbol')].filter(n=>!(importOptions.allowGradientMapping&&svgDefinitionAllowedForMapping(v.root,n)));
  if(!hybrid&&complexEls.length){
   const idSet=new Set(complexEls.map(n=>n.getAttribute('id')).filter(Boolean));let referenced=false;
   [v.root,...v.root.querySelectorAll('*')].forEach(n=>{if(referenced)return;[...(n.attributes||[])].forEach(a=>{const val=String(a.value);const re=/url\(\s*['"]?#([^ )\s'"]+)/g;let mm;while((mm=re.exec(val))){if(idSet.has(mm[1])){referenced=true;break;}}if(!referenced&&(a.localName==='href'||a.name==='href'||a.name.endsWith(':href'))&&val.trim().startsWith('#')&&idSet.has(val.trim().slice(1)))referenced=true;});});
@@ -5825,6 +5844,10 @@ async function assessSvgImportFidelity(source,parts){
   return{ok,changedChannels:changed,largeDeltaChannels:large,largeDeltaRatio:largeRatio,maxDelta:max,meanDelta,changedRatio,reason:ok?'Within visual-fidelity tolerance.':'Decomposition changed the rendered artwork beyond the safe tolerance.'};
  }catch(err){return{ok:false,reason:'Visual verification could not complete: '+(err?.message||String(err))};}
 }
+const IMPORT_MODE_KEY='gsp_svg_import_mode';
+function getImportMode(){const v=$('bcImportMode')?.value;return ['auto','editable','preserve'].includes(v)?v:'auto'}
+try{const saved=localStorage.getItem(IMPORT_MODE_KEY);if(saved&&$('bcImportMode'))$('bcImportMode').value=saved}catch(_){}
+$('bcImportMode')?.addEventListener('change',()=>{try{localStorage.setItem(IMPORT_MODE_KEY,getImportMode())}catch(_){}});
 $('bcImportSvg').onclick=()=>$('bcSvgFile').click();
 
 function decodeSvgBytes(bytes){
@@ -5889,13 +5912,14 @@ function svgNeedsWholeDocumentFallback(v){
  // Root-level effects and semantics that depend on the outer SVG viewport stay intact.
  return !!(v.lengthContext?.unknownViewportPercent||v.typography||v.root.hasAttribute('transform')||['clip-path','mask','filter','marker-start','marker-mid','marker-end'].some(k=>rootStyle[k]&&String(rootStyle[k]).toLowerCase()!=='none')||(rootStyle['mix-blend-mode']&&String(rootStyle['mix-blend-mode']).toLowerCase()!=='normal')||v.root.querySelector('style'));
 }
-async function importSvgSources(items){
+async function importSvgSources(items,options={}){
  if(!items.length)return {files:0,components:0,topLevel:0,retainedWhole:0,embeddedComponents:0,errors:[],notes:[]};
  const MAX_SVG_BATCH_FILES=30,MAX_SVG_BATCH_BYTES=32*1024*1024,MAX_SVG_FILE_BYTES=4*1024*1024;
  if(items.length>MAX_SVG_BATCH_FILES)throw Error(`Select no more than ${MAX_SVG_BATCH_FILES} SVG files at once.`);
  const totalBytes=items.reduce((sum,item)=>sum+Number(item?.file?.size??item?.size??(typeof item?.text==='string'?new Blob([item.text]).size:0)),0);
  if(totalBytes>MAX_SVG_BATCH_BYTES)throw Error(`The selected SVG batch is ${(totalBytes/1048576).toFixed(1)} MB; the safe batch limit is 32 MB. Split the import into smaller batches.`);
- const imported=[];let firstSize=null,retainedWhole=0,embeddedComponents=0;const errors=[],notes=[];
+  const mode=options.mode||getImportMode();
+  const imported=[];let firstSize=null,retainedWhole=0,embeddedComponents=0;const errors=[],notes=[];
  const countEditableComponents=arr=>arr.reduce((n,l)=>n+(l.type==='group'?countEditableComponents(l.children||[]):1),0);
  const countEmbeddedSvg=arr=>arr.reduce((n,l)=>n+(l.type==='svg'?1:l.type==='group'?countEmbeddedSvg(l.children||[]):0),0);
  for(const item of items){try{
@@ -5906,31 +5930,35 @@ async function importSvgSources(items){
   const v=sanitizeSvg(text);if(!firstSize)firstSize={w:v.viewW,h:v.viewH};
   const hasRenderableContent=!!v.root.querySelector('path,rect,circle,ellipse,line,polygon,polyline,text,image,use,foreignObject,switch,svg');
   if(!hasRenderableContent){errors.push(`${name}: no renderable SVG artwork remained after safe import cleanup.${v.importWarnings?.length?' '+v.importWarnings.join(' '):''}`);continue;}
-  let decomposeSource=v,parts=decomposeSimpleSvg(v);
-  if(!parts||!parts.length){
-   const prepared=prepareSvgForEditableDecomposition(v);
-   if(prepared){decomposeSource=prepared;parts=decomposeSimpleSvg(prepared);}
-  }
-  // Hybrid decomposition keeps compatible siblings editable and retains only
-  // the individual unsupported components as embedded SVG sublayers.
-  if(!parts||!parts.length)parts=decomposeHybridSvg(decomposeSource);
-  const requiresWhole=svgNeedsWholeDocumentFallback(v);
-  if(!parts||!parts.length){
-   // Paper.js is a last-resort converter only for plain geometry/text. Calling it
-   // for SVG effects, embedded content or references wastes time and can flatten
-   // unsupported semantics. Those are preserved as an intact SVG object instead.
-   const advanced=!!v.root.querySelector('style,image,use,symbol,textPath,tspan,foreignObject,filter,mask,clipPath,pattern,linearGradient,radialGradient,marker,iframe,object,embed');
-   if(!requiresWhole&&!advanced){try{const pp=await decomposeViaPaper(v);if(pp&&pp.length)parts=pp;}catch(_){}}
-  }
+   const gradients=[...v.root.querySelectorAll('linearGradient,radialGradient')];
+   const complexGradients=gradients.some(g=>!svgSimpleGradientSupported(v.root,g));
+   let forcePreserve=mode==='preserve'||((mode==='auto'||mode==='editable')&&complexGradients),preserveReason='';
+   if(forcePreserve)preserveReason=mode==='preserve'?'import mode preserves original colors':'its gradient cannot be represented as an editable gradient layer';
+   let decomposeSource=v,parts=forcePreserve?null:decomposeSimpleSvg(v,{allowGradientMapping:true});
+   if(!forcePreserve&&(!parts||!parts.length)){
+    const prepared=prepareSvgForEditableDecomposition(v);
+    if(prepared){decomposeSource=prepared;parts=decomposeSimpleSvg(prepared,{allowGradientMapping:true});}
+   }
+   // Hybrid decomposition keeps compatible siblings editable and retains only
+   // the individual unsupported components as embedded SVG sublayers.
+   if(!forcePreserve&&(!parts||!parts.length))parts=decomposeHybridSvg(decomposeSource);
+   const requiresWhole=svgNeedsWholeDocumentFallback(v);
+   if(!forcePreserve&&(!parts||!parts.length)){
+    // Paper.js is a last-resort converter only for plain geometry/text. Calling it
+    // for SVG effects, embedded content or references wastes time and can flatten
+    // unsupported semantics. Those are preserved as an intact SVG object instead.
+    const advanced=!!v.root.querySelector('style,image,use,symbol,textPath,tspan,foreignObject,filter,mask,clipPath,pattern,linearGradient,radialGradient,marker,iframe,object,embed');
+    if(!requiresWhole&&!advanced){try{const pp=await decomposeViaPaper(v);if(pp&&pp.length)parts=pp;}catch(_){}}
+   }
   if(parts&&parts.length){
    let fidelity=await assessSvgImportFidelity(v,parts);
    if(!fidelity.ok){
     const hasCompoundPaths=[...decomposeSource.root.querySelectorAll('path')].some(node=>(parseSvgSubpathRecords(node.getAttribute('d')||'')||[]).length>1);
     if(hasCompoundPaths){
-     const safeParts=decomposeSimpleSvg(decomposeSource,{preserveCompoundPaths:true,allowSvgIslands:true});
+      const safeParts=decomposeSimpleSvg(decomposeSource,{preserveCompoundPaths:true,allowSvgIslands:true,allowGradientMapping:true});
      if(safeParts?.length){const safeFidelity=await assessSvgImportFidelity(v,safeParts);if(safeFidelity.ok){parts=safeParts;fidelity=safeFidelity;notes.push(`${name}: compound path contours were kept together to preserve letter counters and holes; other components were decomposed.`);}}
     }
-    if(!fidelity.ok){notes.push(`${name}: editable decomposition changed the visual result beyond the safe tolerance (${fidelity.reason}). The original SVG was preserved instead.`);parts=null;}
+     if(!fidelity.ok){notes.push(`${name}: editable decomposition changed the visual result beyond the safe tolerance (${fidelity.reason}). The original SVG was preserved instead.`);parts=null;forcePreserve=true;preserveReason='the editable result could not be verified visually';}
    }
   }
   if(v.importWarnings?.length)notes.push(`${name}: ${v.importWarnings.join(' ')}`);
@@ -5947,7 +5975,7 @@ async function importSvgSources(items){
    imported.push(...parts);
   }else{
    imported.push(makeLayer('svg',{name,x:0,y:0,w:v.viewW,h:v.viewH,viewX:v.viewX,viewY:v.viewY,viewW:v.viewW,viewH:v.viewH,preserveAspectRatio:v.preserveAspectRatio,rootAttrs:v.rootAttrs,markup:v.markup,typography:v.typography,svgImportFallback:true}));retainedWhole++;
-   notes.push(`${name}: retained as one complete SVG because ${svgWholeDocumentFallbackReason(v)}. The original SVG context and rendering are kept intact.`);
+    notes.push(`${name}: retained as one complete SVG because ${forcePreserve&&preserveReason?preserveReason:svgWholeDocumentFallbackReason(v)}. The original SVG context and rendering are kept intact.`);
   }
  }catch(err){errors.push(`${String(item?.name||item?.file?.name||'SVG')}: ${err?.message||String(err)}`);}}
  if(imported.length){snap();pathEditId=null;if(!layers.length&&firstSize){W=firstSize.w;H=firstSize.h;}layers.push(...imported);selectedId=imported[imported.length-1].id;selectedIds=new Set([selectedId]);render();fitStage();}
