@@ -15,6 +15,7 @@ Product version: `0.6.103`. Engine version: `5.1`.
 | HarfBuzz.js | 1.6.4 | Vendored locally with `harfbuzz.js` and `harfbuzz.wasm`. |
 | bidi-js | 1.1.0 | Vendored locally. |
 | Paper.js | 0.17.0 | Vendored locally. |
+| svg-pathdata | 9.0.0 | Vendored locally as a single-file ESM build from jsDelivr; used as an optional path parser with the existing parser as fallback. |
 
 ## SHA-256 of vendored files
 
@@ -26,6 +27,7 @@ Product version: `0.6.103`. Engine version: `5.1`.
 - `harfbuzz/index.mjs` — `16016989059A6600A1B82B42F61B494C776DB02DEC49BF645AF65B8A5E599BF9`
 - `harfbuzz/harfbuzz.js` — `28392846CE6ACCB53E34BDCE197B8AA00721E84846FF4B2C0CCFAD5137A0E699`
 - `harfbuzz/harfbuzz.wasm` — `6EEED8E1BC9AD7773038E48FF8F9E07E0AD228572C594B45E5357E9C2F7A0B2E`
+- `svg-pathdata/index.js` — `D08B8678B0F661519356D0B0C3277646AFFD7DB7295AE00E82184A3D87433E4D`
 
 ## SRI (classic CDN fallbacks only)
 

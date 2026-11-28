@@ -33,3 +33,4 @@ the URLs below.
 - **SVGO 4.1.0** — https://github.com/svg/svgo
 - **HarfBuzz.js 1.6.4** — https://github.com/harfbuzz/harfbuzzjs
 - **bidi-js 1.1.0** — https://www.npmjs.com/package/bidi-js
+- **svg-pathdata 9.0.0** — https://github.com/nfroidure/svg-pathdata

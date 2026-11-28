@@ -10,6 +10,8 @@ let W=320,H=90,layers=[],selectedId=null,selectedIds=new Set(),keyObjectId=null,
 const fonts=new Map(),hbFonts=new Map(),opticalFontFaces=new Map();
 function getProjectFontShelf(){const out=[],seen=new Set();const walk=arr=>{for(const layer of arr||[]){if(layer.type==='text'&&layer.fontData){const key=layer.fontData;if(!seen.has(key)){seen.add(key);out.push({id:layer.id,name:layer.fontName||layer.fontFamily||'Embedded font'});}}if(layer.type==='group')walk(layer.children||[]);}};walk(layers);return out;}
 function importWithTimeout(url,ms=6000){let timer;const parsed=new URL(url,document.baseURI);const task=import(parsed.href);return Promise.race([task,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Loading '+parsed.hostname+' timed out.')),ms);})]).finally(()=>clearTimeout(timer));}
+let SVGPathDataLib=null;
+try{import(new URL('js/vendor/svg-pathdata/index.js',document.baseURI).href).then(m=>{SVGPathDataLib=m.SVGPathData||m.default?.SVGPathData||null;}).catch(()=>{});}catch(_){}
 const uid=()=>`l_${Math.random().toString(36).slice(2,9)}${Date.now().toString(36).slice(-3)}`;
 const clone=x=>JSON.parse(JSON.stringify(x));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
@@ -721,6 +723,16 @@ function getIconMatchCanvasMatrix(node){
  }catch(_){}
  return getCanvasRelativeMatrix(node);
 }
+let nativeStrokeBBoxSupport=null;
+function supportsNativeStrokeBBox(){
+ if(nativeStrokeBBoxSupport!==null)return nativeStrokeBBoxSupport;
+ try{
+  const p=document.createElementNS(NS,'path');p.setAttribute('d','M0 0 H10');p.setAttribute('fill','none');p.setAttribute('stroke','#000');p.setAttribute('stroke-width','4');document.body.append(p);
+  const base=p.getBBox(),withStroke=p.getBBox({stroke:true});
+  nativeStrokeBBoxSupport=withStroke.height>base.height+.5;p.remove();
+ }catch(_){nativeStrokeBBoxSupport=false;}
+ return nativeStrokeBBoxSupport;
+}
 function getIconSizeMatchBounds(layer){
  if(!layer||!isLayerEffectivelyAvailable(layer))return null;
  if(layer.iconPixelBounds&&layer.iconPixelBoundsKey===fallbackLayerSignature(layer))return {...layer.iconPixelBounds};
@@ -754,7 +766,11 @@ function getIconSizeMatchBounds(layer){
     vectorEffect:nonScaling?'non-scaling-stroke':'none',strokeLinejoin:style.strokeLinejoin,
     strokeMiterlimit:style.strokeMiterlimit,markerStart:style.markerStart,markerMid:style.markerMid,markerEnd:style.markerEnd
    };
-   const bounds=strokeVisualBounds(item,box,matrix,measuredStyle);
+    const noMarkers=['markerStart','markerMid','markerEnd'].every(k=>!style[k]||style[k]==='none');
+    const nativeStroke=strokeVisible&&!nonScaling&&tag!=='text'&&noMarkers&&supportsNativeStrokeBBox();
+    let bounds=null;
+    if(nativeStroke){try{const nb=item.getBBox({stroke:true});if(nb&&[nb.x,nb.y,nb.width,nb.height].every(Number.isFinite))bounds=transformedRectBounds(nb,matrix,0);}catch(_){}}
+    if(!bounds)bounds=strokeVisualBounds(item,box,matrix,measuredStyle);
    if(!bounds||![bounds.x,bounds.y,bounds.w,bounds.h].every(Number.isFinite))continue;
    result=unionRectBounds(result,bounds);
   }catch(_){/* Ignore one malformed/unmeasurable SVG descendant, not the complete icon. */}
@@ -949,6 +965,30 @@ async function rasterizeLayerForThickness(layer){
   let pixels;try{pixels=ctx.getImageData(0,0,width,height).data;}catch(_){throw Error('The SVG uses an external image or resource that prevents safe pixel measurement.');}
   return{pixels,width,height,scale,view,layerId:layer.id};
  }finally{URL.revokeObjectURL(url);}
+}
+let thicknessWorker=null,thicknessWorkerSeq=0;const thicknessWorkerPending=new Map();
+function getThicknessWorker(){
+ if(thicknessWorker)return thicknessWorker;
+ try{
+  thicknessWorker=new Worker(new URL('js/engine/thickness-worker.js',document.baseURI).href);
+  thicknessWorker.onmessage=e=>{const p=thicknessWorkerPending.get(e.data?.id);if(!p)return;thicknessWorkerPending.delete(e.data.id);if(e.data?.ok){const s=e.data.result.skeleton;s.iterations=e.data.result.skeletonIterations;s.converged=e.data.result.skeletonConverged;p.resolve(e.data.result);}else p.reject(new Error(e.data?.error||'Thickness worker failed.'));};
+  thicknessWorker.onerror=e=>{for(const p of thicknessWorkerPending.values())p.reject(new Error(e.message||'Thickness worker failed.'));thicknessWorkerPending.clear();};
+ }catch(_){thicknessWorker=false;}
+ return thicknessWorker||null;
+}
+function analyzeThicknessPixelsInWorker(raster){
+ const worker=getThicknessWorker();if(!worker)return Promise.reject(new Error('Worker unavailable.'));
+ return new Promise((resolve,reject)=>{
+  const id=++thicknessWorkerSeq,pixels=raster.pixels.slice();
+  thicknessWorkerPending.set(id,{resolve,reject});
+  try{worker.postMessage({id,pixels,width:raster.width,height:raster.height},[pixels.buffer]);}catch(err){thicknessWorkerPending.delete(id);reject(err);}
+ });
+}
+function analyzeThicknessPixelsLocal(raster){
+ const built=thicknessBuildMask(raster.pixels,raster.width,raster.height),topology=thicknessTopology(built.mask,built.width,built.height),dist=thicknessDistanceMap(built.mask,built.width,built.height);
+ let maxRadiusPx=0;for(let i=0;i<dist.length;i++)if(built.mask[i]&&Number.isFinite(dist[i])&&dist[i]>maxRadiusPx)maxRadiusPx=dist[i];
+ const thinningLimit=Math.max(64,Math.min(512,Math.ceil(maxRadiusPx*1.55+16))),skeleton=thicknessSkeletonize(built.mask,built.width,built.height,thinningLimit);
+ return{built,topology,dist,skeleton,skeletonIterations:skeleton.iterations,skeletonConverged:skeleton.converged};
 }
 function thicknessBuildMask(pixels,width,height){
  const pixelCount=width*height;let maxAlpha=0;
@@ -2020,12 +2060,11 @@ async function measureLayerVisualThicknessV3(layer){
  return measureLayerVisualThickness(layer,{includeBranches:true});
 }
 async function measureLayerVisualThickness(layer,options={}){
- const raster=await rasterizeLayerForThickness(layer),built=thicknessBuildMask(raster.pixels,raster.width,raster.height),topology=thicknessTopology(built.mask,built.width,built.height);
+ const raster=await rasterizeLayerForThickness(layer);
+ let analysis;
+ try{analysis=await analyzeThicknessPixelsInWorker(raster);}catch(_){analysis=analyzeThicknessPixelsLocal(raster);}
+ const {built,topology,dist,skeleton}=analysis;
  if(built.coverage>.94)throw Error('The artwork fills almost the entire measurement viewport; isolate the artwork from its background first.');
- const dist=thicknessDistanceMap(built.mask,built.width,built.height);let maxRadiusPx=0;
- for(let i=0;i<dist.length;i++)if(built.mask[i]&&Number.isFinite(dist[i])&&dist[i]>maxRadiusPx)maxRadiusPx=dist[i];
- const thinningLimit=Math.max(64,Math.min(512,Math.ceil(maxRadiusPx*1.55+16)));
- const skeleton=thicknessSkeletonize(built.mask,built.width,built.height,thinningLimit);
  const medial=options?.includeBranches?thicknessBuildMedialBranchGraph(skeleton,dist,built.width,built.height,raster,built):null;
  const medialSamples=medial?.samples||[];
  // When the branch graph supplies the final measurement vector, the legacy
@@ -5280,7 +5319,12 @@ const GSP_IMPORT_SKIP=new Set(['desc','title','metadata','namedview','defs','mas
 // Resolve relative moveto commands before splitting. In SVG, a relative `m`
 // after a closed subpath starts at the previous current point, not at (0,0).
 function parseSvgSubpathRecords(d){
- const source=String(d||''),tokens=[],numberRe=/^[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/;let pos=0,cmdLetter='',paramIndex=0;
+  const source=String(d||'');
+  if(typeof SVGPathDataLib!=='undefined'&&SVGPathDataLib&&source){try{const abs=new SVGPathDataLib(source).toAbs().encode();if(abs!==source)return parseSvgSubpathRecordsImpl(abs)||parseSvgSubpathRecordsImpl(source);}catch(_){}}
+  return parseSvgSubpathRecordsImpl(source);
+}
+function parseSvgSubpathRecordsImpl(d){
+  const source=String(d||''),tokens=[],numberRe=/^[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/;let pos=0,cmdLetter='',paramIndex=0;
  while(pos<source.length){
   const ch=source[pos];
   if(/[\s,]/.test(ch)){pos++;continue;}
