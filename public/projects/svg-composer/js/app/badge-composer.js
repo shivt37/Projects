@@ -3046,7 +3046,7 @@ async function centerArtwork(forceCommonBaseline=false){
   const roots=(selectionExplicit?picked:layers.filter(l=>l.visible!==false&&num(l.opacity,1)>0));
   if(!roots.length){status('Select some artwork first, or add an object to the artboard.','error');return;}
   if(roots.some(root=>hasVisibleLockedLayer(root))){status('Unlock the selected layers before Auto Center. Unselected locked layers are not affected.','error');return;}
-  const available=roots.filter(isLayerEffectivelyAvailable);
+  let available=roots.filter(isLayerEffectivelyAvailable);
   if(!available.length){status('The selected artwork is hidden or unavailable.','error');return;}
   const fontState=await prepareVisibleOpticalFonts();if(fontState.loaded)render();
   const parts=getCompositionParts(available,selectionExplicit);
@@ -3065,6 +3065,7 @@ async function centerArtwork(forceCommonBaseline=false){
    }
    if(forceCommonBaseline){status('Common baseline could not measure every selected text layer reliably. No changes were made. Check that the text uses a supported horizontal writing line and that its font metrics are available.','warn');return;}
   }
+  let smartFallbackNote='';
   // Mixed selection path: snapshot first, then apply baseline + icon sizing + composition centering.
   if(parts.textLayers.length&&parts.iconRoots.length&&!parts.unsupported.length&&(textIsOneRow||forceCommonBaseline)){
    const snapshot=JSON.stringify({W,H,layers,selectedId,selectedIds:[...selectedIds],keyObjectId});
@@ -3083,9 +3084,11 @@ async function centerArtwork(forceCommonBaseline=false){
     const actionLabel=forceCommonBaseline?'Common baseline':'Smart Auto Center';
     status(`${actionLabel}: ${result.textCount} text layer${result.textCount===1?'':'s'} ${forceCommonBaseline?'matched to one shared baseline':'optically centered'}; ${iconMessage}. Composition centered. Text size was preserved.`, 'ok');return;
    }
-   // Restore any partial transforms before using the safe geometric fallback.
-   restore(snapshot);
-   status('Smart text-and-icon alignment could not be measured safely. No changes were kept; use ordinary Auto Center or review the selected icon size.','warn');return;
+    // Restore any partial transforms before using the safe geometric fallback.
+    restore(snapshot);
+    available=selectedRoots().filter(isLayerEffectivelyAvailable);
+    if(!available.length){status('Smart text-and-icon alignment could not be measured safely. No changes were kept and no artwork remains available to center.','warn');return;}
+    smartFallbackNote=' Smart text-and-icon alignment could not be measured safely, so visible artwork was centered geometrically.';
   }
   if(forceCommonBaseline&&parts.textLayers.length){status('Common baseline could not safely process this selection. Nothing was changed. Use single-line editable text layers and try again.','warn');return;}
   // Non-text artwork, unsupported text or mixed artwork without a safe icon match:
@@ -3100,7 +3103,7 @@ async function centerArtwork(forceCommonBaseline=false){
   const clearances={left:finalB.x,right:W-(finalB.x+finalB.w),top:finalB.y,bottom:H-(finalB.y+finalB.h)},padOk=Object.values(clearances).every(v=>v>=padding-.01);
   const suffix=fontState.warning?` ${fontState.warning}`:'';
   const baseMessage=parts.textLayers.length>1&&!textIsOneRow?'Text layers appear to be on separate rows, so their separate line positions were preserved. Visible composition centered geometrically.':'Visible artwork centered. Original sizes were preserved.';
-  status(`${baseMessage}${padOk?` ${padding}-unit padding is preserved.`:' Padding could not be met without resizing; use Fit Artwork if desired.'}${suffix}`,padOk?'ok':'warn');
+   status(`${baseMessage}${smartFallbackNote}${padOk?` ${padding}-unit padding is preserved.`:' Padding could not be met without resizing; use Fit Artwork if desired.'}${suffix}`,padOk?'ok':'warn');
  }catch(err){status(`Auto Center could not finish: ${err.message||err}`,'error');}
  finally{centerArtworkRunning=false;}
 }
@@ -3351,7 +3354,7 @@ function selectedRoots(){
  return [...selected].map(id=>rootMap.get(id)).filter(Boolean);
 }
 function visualBounds(l){const b=bounds(l),sx=num(l.scaleX,100)/100,sy=num(l.scaleY,100)/100,a=num(l.rotate)*Math.PI/180,c=Math.cos(a),sn=Math.sin(a),pts=[[b.x,b.y],[b.x+b.w,b.y],[b.x+b.w,b.y+b.h],[b.x,b.y+b.h]].map(([x,y])=>{const xx=(x-l.x)*sx,yy=(y-l.y)*sy;return{x:l.x+xx*c-yy*sn,y:l.y+xx*sn+yy*c};});const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);return{x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};}
-function selectionBox(){const chosen=selectedRoots();if(!chosen.length)return null;const bs=chosen.map(l=>getLayerWorldBounds(l)||visualBounds(l)).filter(Boolean);if(!bs.length)return null;const x=Math.min(...bs.map(b=>b.x)),y=Math.min(...bs.map(b=>b.y)),right=Math.max(...bs.map(b=>b.x+b.w)),bottom=Math.max(...bs.map(b=>b.y+b.h));return{x,y,w:right-x,h:bottom-y,chosen};}
+function selectionBox(){const chosen=selectedRoots();if(!chosen.length)return null;const bs=chosen.map(l=>((l.type==='svg'||l.svgImportFallback)&&getIconSizeMatchBounds(l))||getLayerWorldBounds(l)||visualBounds(l)).filter(Boolean);if(!bs.length)return null;const x=Math.min(...bs.map(b=>b.x)),y=Math.min(...bs.map(b=>b.y)),right=Math.max(...bs.map(b=>b.x+b.w)),bottom=Math.max(...bs.map(b=>b.y+b.h));return{x,y,w:right-x,h:bottom-y,chosen};}
 function drawBadgeCenterGuides(group,screenScale){
  if(!$('bcShowCenterGuides')?.checked)return;
  const x=W/2,y=H/2;
