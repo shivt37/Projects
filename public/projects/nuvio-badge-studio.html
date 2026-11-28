@@ -209,11 +209,22 @@ button.sm{height:28px;padding:0 9px;font-size:12px}
 }
 .studio-grid{
   display:grid;
-  grid-template-columns:minmax(0,1fr) 390px;
-  gap:18px;
+  grid-template-columns:minmax(0,1fr) 8px var(--inspector-w,390px);
+  gap:14px;
   align-items:start;
 }
 .studio-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.studio-resizer{
+  position:sticky;top:calc(var(--hh) + 16px);
+  align-self:start;width:8px;height:min(560px,calc(100vh - var(--hh) - 32px));
+  display:grid;place-items:center;cursor:col-resize;touch-action:none;
+}
+.studio-resizer::before{
+  content:"";width:4px;height:100%;border-radius:99px;
+  background:var(--border);transition:background .12s,width .12s;
+}
+.studio-resizer:hover::before,.studio-resizer:focus-visible::before,body.resizing-inspector .studio-resizer::before{width:6px;background:var(--accent)}
+body.resizing-inspector{cursor:col-resize;user-select:none}
 .studio-side{
   position:sticky;top:calc(var(--hh) + 16px);
   display:flex;flex-direction:column;gap:14px;
@@ -800,6 +811,7 @@ body.modal-open{overflow:hidden!important;touch-action:none}
 .groups-details>summary{flex-wrap:wrap}
 @media(max-width:1100px){
   .studio-grid{grid-template-columns:1fr;gap:14px}
+  .studio-resizer{display:none}
   .studio-side{position:static;max-height:none;overflow:visible;order:-1;padding-right:0}
   .header-file{max-width:260px}
 }
@@ -1001,6 +1013,8 @@ body.modal-open{overflow:hidden!important;touch-action:none}
       </section>
 
     </div>
+
+    <div id="studioResizer" class="studio-resizer" role="separator" aria-label="Resize inspector" aria-orientation="vertical" tabindex="0"></div>
 
     <!-- RIGHT STICKY STUDIO INSPECTOR -->
     <aside class="studio-side">
@@ -3181,7 +3195,7 @@ $('#gist-publish').addEventListener('click', async () => {
 const SZ = { stream: [20, 16, 34, 92, 3, 2, 10, 6], player: [17, 13, 28, 78, 3, 2, 9, 5], preview: [24, 18, 38, 112, 4, 3, 11, 7] };
 function setSz() {
   const a = SZ[$('#sz').value] || SZ.stream, z = parseFloat($('#zm').value) || 1;
-  const r = document.documentElement.style;
+  const r = $('#stage')?.style;if(!r)return;
   ['--ch', '--ih', '--iminw', '--imaxw', '--ph', '--pv', '--cfont', '--crad'].forEach((k, j) => r.setProperty(k, (a[j] * z).toFixed(1) + 'px'));
 }
 $('#sz').onchange = $('#zm').onchange = setSz;
@@ -3360,6 +3374,22 @@ $('#th').onclick = $('#th-top').onclick = () => th(document.documentElement.data
 
 const hh = () => document.documentElement.style.setProperty('--hh', $('#appbar').offsetHeight + 'px');
 addEventListener('resize', hh); hh();
+const INSPECTOR_WIDTH_KEY='nbl-inspector-width',INSPECTOR_MIN=300,INSPECTOR_MAX=720,INSPECTOR_DEFAULT=390;
+function clampInspectorWidth(px){const max=Math.max(INSPECTOR_MIN,Math.min(INSPECTOR_MAX,innerWidth-380));return Math.round(Math.max(INSPECTOR_MIN,Math.min(max,px)))}
+function setInspectorWidth(px,persist=true){const w=clampInspectorWidth(px);document.documentElement.style.setProperty('--inspector-w',w+'px');if(persist)try{localStorage.setItem(INSPECTOR_WIDTH_KEY,String(w))}catch(_){}return w}
+function currentInspectorWidth(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--inspector-w'))||INSPECTOR_DEFAULT}
+try{const raw=localStorage.getItem(INSPECTOR_WIDTH_KEY);const saved=Number(raw);if(raw!==null&&Number.isFinite(saved))setInspectorWidth(saved,false)}catch(_){}
+const resizer=$('#studioResizer');
+if(resizer){
+ let dragging=false,startX=0,startW=0;
+ resizer.addEventListener('pointerdown',e=>{if(matchMedia('(max-width:1100px)').matches)return;dragging=true;startX=e.clientX;startW=currentInspectorWidth();try{resizer.setPointerCapture(e.pointerId)}catch(_){}document.body.classList.add('resizing-inspector');e.preventDefault()});
+ resizer.addEventListener('pointermove',e=>{if(!dragging)return;setInspectorWidth(startW+startX-e.clientX,false)});
+ const finish=e=>{if(!dragging)return;dragging=false;try{resizer.releasePointerCapture(e.pointerId)}catch(_){}document.body.classList.remove('resizing-inspector');try{localStorage.setItem(INSPECTOR_WIDTH_KEY,String(currentInspectorWidth()))}catch(_){}};
+ resizer.addEventListener('pointerup',finish);
+ resizer.addEventListener('pointercancel',finish);
+ resizer.addEventListener('keydown',e=>{const d=e.key==='ArrowLeft'?12:e.key==='ArrowRight'?-12:0;if(!d)return;e.preventDefault();setInspectorWidth(currentInspectorWidth()+d)});
+ resizer.addEventListener('dblclick',()=>setInspectorWidth(INSPECTOR_DEFAULT));
+}
 
 /* ---- SVG Sanitization, Recoloring & Embedding ---- */
 const CA = ['fill', 'stroke', 'stop-color', 'flood-color', 'lighting-color'];
