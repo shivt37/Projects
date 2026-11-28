@@ -504,6 +504,13 @@ body.glass .chip{
 .svg-inv-bar strong{font-size:18px;font-variant-numeric:tabular-nums;line-height:1}
 .svg-inv-bar span{font-size:11.5px;color:var(--muted)}
 .svg-inv-bar small{font-size:11px;color:var(--faint)}
+.export-fmt-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:9px 11px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);
+}
+.export-fmt-copy{display:flex;flex-direction:column;gap:1px;min-width:0}
+.export-fmt-copy strong{font-size:12px;font-weight:600;color:var(--text)}
+.export-fmt-copy small{font-size:10.5px;color:var(--muted)}
 
 /* ---- Groups Panel ---- */
 .groups-details>summary{
@@ -1111,6 +1118,13 @@ body.modal-open{overflow:hidden!important;touch-action:none}
           </div>
           <button class="pri" id="global-svg-apply" type="button" disabled style="width:100%">Recolor all SVGs</button>
           <p class="hint" id="global-svg-status" role="status" aria-live="polite" style="font-size:11.5px">SVG artwork only · raster images and preserved SVGs are skipped.</p>
+          <div class="export-fmt-bar">
+            <div class="export-fmt-copy">
+              <strong>Export as SVGZ (gzip)</strong>
+              <small id="svgz-note">Plain SVG · Android, iOS &amp; Web</small>
+            </div>
+            <label class="sw" title="Toggle gzipped SVGZ on Export, Copy JSON, and Publish to Gist"><input type="checkbox" class="switch-input" id="export-svgz-toggle"><span id="export-svgz-lbl">SVG</span></label>
+          </div>
         </div>
 
         <!-- Tab 3: Format Notes -->
@@ -1149,6 +1163,13 @@ body.modal-open{overflow:hidden!important;touch-action:none}
     </div>
     <div class="health-stats" id="health-stats"></div>
     <div class="health-list" id="health-list"></div>
+    <div class="export-fmt-bar" id="health-svgz-bar">
+      <div class="export-fmt-copy">
+        <strong>Export format: <span id="health-svgz-mode">SVG (standard)</span></strong>
+        <small id="health-svgz-hint">Plain SVG works across Android, iOS, Fusion &amp; browsers.</small>
+      </div>
+      <label class="sw" title="Toggle gzipped SVGZ on Export, Copy JSON, and Publish to Gist"><input type="checkbox" class="switch-input" id="health-svgz-toggle"><span>SVGZ</span></label>
+    </div>
     <div class="modal-foot">
       <span class="hint" id="health-footnote" style="font-size:11px">Errors must be fixed before export.</span>
       <div class="modal-buttons">
@@ -1416,6 +1437,9 @@ const SVG_ERRORS = new WeakMap();
 const TEXT_COLOR_TIMERS = new WeakMap();
 let LOAD_SEQ = 0, IMPORT_EMBEDDING = false;
 let PRESET_KEY = 'glass';
+const SUPPORTS_GZIP = typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+let EXPORT_SVGZ = false;
+try { EXPORT_SVGZ = SUPPORTS_GZIP && localStorage.getItem('nbl-export-svgz') === '1'; } catch (_) {}
 let PRESET_THEME = 'D'; // 'D' or 'L' independent of editor UI theme
 
 const H = n => Math.max(0, Math.min(255, Math.round(+n || 0))).toString(16).padStart(2, '0').toUpperCase();
@@ -2592,7 +2616,7 @@ async function load(txt, name) {
     ['tagColor', 'borderColor', 'textColor'].forEach(k => { if (f[k] != null) f[k] = fixColor(f[k]); });
     f.svgPreserveOriginal = f.svgPreserveOriginal === true || !hasBadgeTextColor(f);
     if (typeof f.svgSourceURL !== 'string') f.svgSourceURL = '';
-    if (!f.svgSourceURL && isSvgDataUrl(f.imageURL)) f.svgSourceURL = f.imageURL;
+    if (!f.svgSourceURL && isSvgDataUrl(f.imageURL) && !isSvgzDataUrl(f.imageURL)) f.svgSourceURL = f.imageURL;
   });
   ORIGINAL_STYLES = Object.fromEntries(filters.map(f => [f.id, { tagColor: f.tagColor, borderColor: f.borderColor, textColor: f.textColor, tagStyle: f.tagStyle, imageURL: f.imageURL, svgPreserveOriginal: f.svgPreserveOriginal }]));
   const seq = ++LOAD_SEQ;
@@ -2609,6 +2633,7 @@ async function load(txt, name) {
     if (seq !== LOAD_SEQ) return;
     render(); commit(); syncGlobalSvgColorFromFilters();
     const parts = [];
+    if (stats.unpacked) parts.push(stats.unpacked + ' SVGZ' + (stats.unpacked === 1 ? '' : 's') + ' unpacked');
     if (stats.embedded) parts.push(stats.embedded + ' SVG' + (stats.embedded === 1 ? '' : 's') + ' embedded');
     if (stats.recolored) parts.push(stats.recolored + ' recolored');
     if (stats.failed) parts.push(stats.failed + ' kept as URL');
@@ -2974,8 +2999,8 @@ addEventListener('drop', e => {
   f.text().then(t => load(t, f.name)).catch(err => toast('Could not read JSON: ' + err.message));
 });
 
-/* ---- Export (Fixed: preserves S.extra & only cleans color fields!) ---- */
-function out() {
+/* ---- Export (Fixed: preserves S.extra & supports optional global SVGZ gzip export!) ---- */
+function buildExportPayload() {
   const cleanColor = v => typeof v === 'string' ? v.trim().replace(/^#+/, '#') : v;
   const groups = S.groups.map(g => {
     const { ...copy } = groupRecord(g);
@@ -3002,6 +3027,24 @@ function out() {
     Object.keys(S.extra).forEach(k => {
       if (k !== '_originalStyles' && k !== 'groups' && k !== 'filters') payload[k] = S.extra[k];
     });
+  }
+  return payload;
+}
+function out() { return JSON.stringify(buildExportPayload(), null, 2); }
+async function outForExport() {
+  const payload = buildExportPayload();
+  if (!EXPORT_SVGZ || !SUPPORTS_GZIP) return JSON.stringify(payload, null, 2);
+  const cache = new Map();
+  for (const x of payload.filters) {
+    const u = String(x.imageURL || '').trim();
+    if (!isSvgDataUrl(u) || isSvgzDataUrl(u)) continue;
+    let gz = cache.get(u);
+    if (!gz) {
+      const xml = decodeSvgDataUrl(u);
+      gz = await encodeSvgzDataUrl(xml);
+      cache.set(u, gz);
+    }
+    x.imageURL = gz;
   }
   return JSON.stringify(payload, null, 2);
 }
@@ -3095,14 +3138,16 @@ document.addEventListener('touchmove', e => {
   if (document.body.classList.contains('modal-open') && !e.target.closest('.modal-card')) e.preventDefault();
 }, { passive: false });
 function closeModal(name) { const m = $('#' + name + '-modal'); if (m) { m.classList.remove('show'); m.setAttribute('aria-hidden', 'true'); syncBodyScrollLock(); } }
-function downloadJson() {
-  const base = fname.replace(/\.json$/i, '').replace(/-edited$/, '');
+async function downloadJson() {
+  const base = fname.replace(/\.json$/i, '').replace(/-edited$/, '').replace(/-svgz$/, '');
+  const json = await outForExport();
+  const kb = Math.max(1, Math.round(TE.encode(json).length / 1024));
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([out()], { type: 'application/json' }));
-  a.download = base + '-edited.json';
+  a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  a.download = base + (EXPORT_SVGZ ? '-svgz' : '-edited') + '.json';
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-  toast('Downloaded ' + a.download);
+  toast(`Downloaded ${a.download} (${EXPORT_SVGZ ? 'SVGZ · ' : ''}${kb} KB)`);
 }
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true; }
@@ -3114,7 +3159,11 @@ async function copyText(t) {
     } catch (__) { return false; }
   }
 }
-async function copyJson() { toast(await copyText(out()) ? 'JSON copied to clipboard' : 'Could not access clipboard'); }
+async function copyJson() {
+  const json = await outForExport();
+  const kb = Math.max(1, Math.round(TE.encode(json).length / 1024));
+  toast(await copyText(json) ? `JSON copied (${EXPORT_SVGZ ? 'SVGZ · ' : ''}${kb} KB)` : 'Could not access clipboard');
+}
 
 $('#health-open').onclick = () => openHealth('none');
 $('#health-continue').onclick = () => {
@@ -3165,7 +3214,7 @@ $('#gist-publish').addEventListener('click', async () => {
   let tab = null; try { tab = window.open('about:blank', '_blank'); } catch (_) {}
   GIST_BUSY = true; btn.disabled = true; btn.textContent = 'Publishing…'; $('#gist-result').hidden = true;
   try {
-    const name = gistFileName(), content = out(), kb = Math.max(1, Math.round(TE.encode(content).length / 1024));
+    const name = gistFileName(), content = await outForExport(), kb = Math.max(1, Math.round(TE.encode(content).length / 1024));
     setGistStatus('Uploading ' + kb + ' KB to GitHub…');
     const res = await fetch('https://api.github.com/gists', {
       method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
@@ -3322,7 +3371,7 @@ function hist(d) {
   (o.f || []).forEach(f => {
     f.imageURL = poolGet(f.imageURL);
     f.svgSourceURL = poolGet(f.svgSourceURL);
-    if (!f.svgSourceURL && isSvgDataUrl(f.imageURL)) f.svgSourceURL = f.imageURL;
+    if (!f.svgSourceURL && isSvgDataUrl(f.imageURL) && !isSvgzDataUrl(f.imageURL)) f.svgSourceURL = f.imageURL;
   });
   S = { filters: o.f, groups: (o.g || []).map(groupRecord), extra: o.e || {}, hg: o.h };
   render(true); auto();
@@ -3463,22 +3512,66 @@ function recolorSvgDoc(d, c) {
   return d;
 }
 function isSvgDataUrl(u) { return /^data:image\/svg\+xml(?:;[^,]*)?,/i.test(String(u || '')); }
-function isSvgUrl(u) { try { const p = new URL(u, location.href); return /^https?:$/.test(p.protocol) && /\.svg$/i.test(p.pathname); } catch (_) { return false; } }
+function isSvgUrl(u) { try { const p = new URL(u, location.href); return /^https?:$/.test(p.protocol) && /\.(?:svg|svgz)$/i.test(p.pathname); } catch (_) { return false; } }
+const isGzipBytes = b => b && b.length >= 2 && b[0] === 0x1F && b[1] === 0x8B;
+function base64ToBytes(b64) {
+  const bin = atob(String(b64 || '').replace(/\s/g, '')), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+function bytesToBase64(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, Math.min(i + 0x8000, bytes.length)));
+  return btoa(bin);
+}
+async function gzipString(str) {
+  if (!SUPPORTS_GZIP) throw Error('Browser does not support gzip CompressionStream');
+  const stream = new Blob([TE.encode(str)]).stream().pipeThrough(new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function gunzipBytes(bytes) {
+  if (!SUPPORTS_GZIP) throw Error('Browser does not support gzip DecompressionStream');
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const reader = stream.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > 2 * 1024 * 1024) { try { await reader.cancel(); } catch (_) {} throw Error('Decompressed SVG exceeds 2 MB limit'); }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.byteLength; }
+  return TD.decode(out);
+}
+function isSvgzDataUrl(u) {
+  const m = /^data:image\/svg\+xml((?:;[^,]*)?),(.*)$/is.exec(String(u || ''));
+  if (!m || !/;base64(?:;|$)/i.test(m[1])) return false;
+  try { return isGzipBytes(base64ToBytes(m[2].slice(0, 8))); } catch (_) { return false; }
+}
 function decodeSvgDataUrl(u) {
   const m = /^data:image\/svg\+xml((?:;[^,]*)?),(.*)$/is.exec(String(u || ''));
   if (!m) throw Error('Not an SVG data URL');
+  if (/;base64(?:;|$)/i.test(m[1])) return TD.decode(base64ToBytes(m[2]));
+  return decodeURIComponent(m[2]);
+}
+async function decodeSvgDataUrlAsync(u) {
+  const m = /^data:image\/svg\+xml((?:;[^,]*)?),(.*)$/is.exec(String(u || ''));
+  if (!m) throw Error('Not an SVG data URL');
   if (/;base64(?:;|$)/i.test(m[1])) {
-    const bin = atob(m[2].replace(/\s/g, '')), bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return TD.decode(bytes);
+    const bytes = base64ToBytes(m[2]);
+    return isGzipBytes(bytes) ? await gunzipBytes(bytes) : TD.decode(bytes);
   }
   return decodeURIComponent(m[2]);
 }
 function encodeSvgDataUrl(xml) {
-  const bytes = TE.encode(xml);
-  let bin = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, Math.min(i + 0x8000, bytes.length)));
-  return 'data:image/svg+xml;base64,' + btoa(bin);
+  return 'data:image/svg+xml;base64,' + bytesToBase64(TE.encode(xml));
+}
+async function encodeSvgzDataUrl(xml) {
+  return 'data:image/svg+xml;base64,' + bytesToBase64(await gzipString(xml));
 }
 async function fetchSvgText(url) {
   let parsed; try { parsed = new URL(url, location.href); } catch (_) { throw Error('Invalid SVG URL'); }
@@ -3489,7 +3582,7 @@ async function fetchSvgText(url) {
     if (!res.ok) throw Error('HTTP ' + res.status);
     const bytes = new Uint8Array(await res.arrayBuffer());
     if (bytes.byteLength > 2 * 1024 * 1024) throw Error('SVG exceeds 2 MB limit');
-    const txt = TD.decode(bytes);
+    const txt = isGzipBytes(bytes) ? await gunzipBytes(bytes) : TD.decode(bytes);
     const doc = svgParse(txt); if (!doc) throw Error('Invalid SVG');
     return new XMLSerializer().serializeToString(doc);
   } catch (e) {
@@ -3508,7 +3601,7 @@ async function mapLimit(items, limit, fn) {
 function renderSvgForFilter(f, xml, colorOverride) {
   const d = svgParse(xml); if (!d) throw Error('SVG sanitization failed');
   const clean = new XMLSerializer().serializeToString(d);
-  if (!f.svgSourceURL && isSvgDataUrl(f.imageURL)) f.svgSourceURL = f.imageURL;
+  if (!f.svgSourceURL && isSvgDataUrl(f.imageURL) && !isSvgzDataUrl(f.imageURL)) f.svgSourceURL = f.imageURL;
   if (!f.svgSourceURL) f.svgSourceURL = encodeSvgDataUrl(clean);
   if (f.svgPreserveOriginal) return clean;
   const color = colorOverride === undefined ? f.textColor : colorOverride;
@@ -3528,15 +3621,20 @@ function applySvgForFilter(f, xml, colorOverride) {
 }
 function applyPreserveMode(f) { const xml = svgSourceXml(f); return xml ? applySvgForFilter(f, xml) : false; }
 async function processImportedSvgs(filters, seq) {
-  const stats = { embedded: 0, recolored: 0, preserved: 0, failed: 0 }, remote = [];
+  const stats = { embedded: 0, recolored: 0, preserved: 0, unpacked: 0, failed: 0 }, remote = [];
   let total = 0;
   for (const f of filters) {
     const u = String(f.imageURL || '').trim();
     if (isSvgDataUrl(u)) {
       try {
-        const src = svgSourceXml(f) || decodeSvgDataUrl(u);
-        const next = encodeSvgDataUrl(renderSvgForFilter(f, src));
-        if (next !== u) { f.imageURL = next; stats.embedded++; }
+        const wasSvgz = isSvgzDataUrl(u);
+        if (isSvgzDataUrl(f.svgSourceURL)) f.svgSourceURL = '';
+        const src = (isSvgDataUrl(f.svgSourceURL) && !isSvgzDataUrl(f.svgSourceURL)) ? decodeSvgDataUrl(f.svgSourceURL) : await decodeSvgDataUrlAsync(u);
+        const d = svgParse(src); if (!d) throw Error('Invalid SVG');
+        const cleanSrc = new XMLSerializer().serializeToString(d);
+        if (!f.svgSourceURL) f.svgSourceURL = encodeSvgDataUrl(cleanSrc);
+        const next = encodeSvgDataUrl(renderSvgForFilter(f, cleanSrc));
+        if (next !== u) { f.imageURL = next; if (wasSvgz) stats.unpacked++; else stats.embedded++; }
         if (f.svgPreserveOriginal) stats.preserved++;
         else if (f.textColor && !parse(f.textColor).bad) stats.recolored++;
         SVG_ERRORS.delete(f);
@@ -3670,16 +3768,17 @@ $('#global-svg-apply').addEventListener('click', async () => {
 const SVG_UPLOAD_MAX = 2 * 1024 * 1024;
 let SVG_UPLOAD_TARGET = null;
 const svgFileInput = document.createElement('input');
-svgFileInput.type = 'file'; svgFileInput.accept = '.svg,image/svg+xml'; svgFileInput.hidden = true;
+svgFileInput.type = 'file'; svgFileInput.accept = '.svg,.svgz,image/svg+xml'; svgFileInput.hidden = true;
 document.body.appendChild(svgFileInput);
-const isSvgFile = file => !!file && (/\.svg$/i.test(file.name || '') || file.type === 'image/svg+xml');
+const isSvgFile = file => !!file && (/\.(?:svg|svgz)$/i.test(file.name || '') || file.type === 'image/svg+xml');
 const clearSvgDrop = () => document.querySelectorAll('.card.svg-drop').forEach(c => c.classList.remove('svg-drop'));
 async function uploadSvgToFilter(f, file) {
   if (!f || !file) return;
-  if (!isSvgFile(file)) { toast('Choose an .svg file'); return; }
+  if (!isSvgFile(file)) { toast('Choose an .svg or .svgz file'); return; }
   if (file.size > SVG_UPLOAD_MAX) { toast('SVG exceeds 2 MB limit'); return; }
   try {
-    const txt = TD.decode(await file.arrayBuffer()).replace(/^\uFEFF/, '');
+    const rawBytes = new Uint8Array(await file.arrayBuffer());
+    const txt = (isGzipBytes(rawBytes) ? await gunzipBytes(rawBytes) : TD.decode(rawBytes)).replace(/^\uFEFF/, '');
     const doc = svgParse(txt); if (!doc) throw Error('Not a valid SVG');
     const source = new XMLSerializer().serializeToString(doc);
     f.svgSourceURL = encodeSvgDataUrl(source);
@@ -3702,6 +3801,32 @@ svgFileInput.addEventListener('change', () => {
   const file = svgFileInput.files[0], f = SVG_UPLOAD_TARGET; SVG_UPLOAD_TARGET = null; svgFileInput.value = '';
   if (file && f) uploadSvgToFilter(f, file);
 });
+
+/* ---- Global SVG / SVGZ Export Toggle Sync ---- */
+function syncSvgzToggleUI() {
+  const t1 = $('#export-svgz-toggle'), t2 = $('#health-svgz-toggle');
+  if (t1) { t1.checked = EXPORT_SVGZ; t1.disabled = !SUPPORTS_GZIP; }
+  if (t2) { t2.checked = EXPORT_SVGZ; t2.disabled = !SUPPORTS_GZIP; }
+  const lbl = $('#export-svgz-lbl'), note = $('#svgz-note');
+  if (lbl) lbl.textContent = EXPORT_SVGZ ? 'SVGZ' : 'SVG';
+  if (note) note.textContent = !SUPPORTS_GZIP
+    ? 'Not supported in this browser'
+    : EXPORT_SVGZ ? 'Gzipped SVGZ · smaller JSON · Android / NuvioMobile' : 'Plain SVG · Android, iOS, Fusion & Web';
+  const hm = $('#health-svgz-mode'), hh = $('#health-svgz-hint');
+  if (hm) hm.textContent = EXPORT_SVGZ ? 'SVGZ (gzipped)' : 'SVG (standard)';
+  if (hh) hh.textContent = !SUPPORTS_GZIP
+    ? 'Gzip CompressionStream not supported in this browser.'
+    : EXPORT_SVGZ ? 'Compresses embedded SVGs on export (Android / NuvioMobile compatible; iOS/Web may not render gzipped data URIs).' : 'Plain SVG works across Android, iOS, Fusion & browsers.';
+}
+function setExportSvgz(on) {
+  EXPORT_SVGZ = SUPPORTS_GZIP && !!on;
+  try { localStorage.setItem('nbl-export-svgz', EXPORT_SVGZ ? '1' : '0'); } catch (_) {}
+  syncSvgzToggleUI();
+  toast(EXPORT_SVGZ ? 'Export format set to SVGZ (gzipped)' : 'Export format set to standard SVG');
+}
+$('#export-svgz-toggle')?.addEventListener('change', e => setExportSvgz(e.target.checked));
+$('#health-svgz-toggle')?.addEventListener('change', e => setExportSvgz(e.target.checked));
+syncSvgzToggleUI();
 
 /* ---- Startup & Session Restore ---- */
 try { const v = localStorage.getItem('nbl-style-preset'); if (v && PRE[v]) PRESET_KEY = v; } catch (_) {}
