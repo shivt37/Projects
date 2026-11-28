@@ -1206,12 +1206,12 @@ body.modal-open{overflow:hidden!important;touch-action:none}
       <input id="merge-files" type="file" accept=".json,application/json" multiple>
     </label>
     <div class="merge-file-list" id="merge-file-list"><div class="merge-empty">No packs selected yet.</div></div>
-    <label class="field"><span>Import strategy</span>
-      <select id="merge-mode">
+    <div class="field"><span>Import strategy</span>
+      <select aria-label="Import strategy" id="merge-mode">
         <option value="merge">Merge into current configuration</option>
         <option value="replace">Replace current configuration with these packs</option>
       </select>
-    </label>
+    </div>
     <div class="merge-notice">Matching group IDs + names are combined. Conflicting IDs are renamed and badge references are updated automatically.</div>
     <div class="modal-foot">
       <span class="hint" id="merge-status" role="status" style="font-size:11.5px">Add files or links to begin.</span>
@@ -1237,23 +1237,23 @@ body.modal-open{overflow:hidden!important;touch-action:none}
     <div class="bulk-sections">
       <div class="bulk-section">
         <div class="zone-label">Target &amp; Behavior</div>
-        <label class="field"><span>Target group</span><select id="bulk-group"></select></label>
+        <div class="field"><span>Target group</span><select aria-label="Target group" id="bulk-group"></select></div>
         <div class="bulk-grid-2">
-          <label class="field"><span>Enabled state</span>
-            <select id="bulk-enabled">
+          <div class="field"><span>Enabled state</span>
+            <select aria-label="Enabled state" id="bulk-enabled">
               <option value="keep">Do not change</option>
               <option value="enable">Enable all</option>
               <option value="disable">Disable all</option>
             </select>
-          </label>
-          <label class="field"><span>Tag style</span>
-            <select id="bulk-style">
+          </div>
+          <div class="field"><span>Tag style</span>
+            <select aria-label="Tag style" id="bulk-style">
               <option value="">Do not change</option>
               <option value="filled">Filled</option>
               <option value="bordered">Bordered</option>
               <option value="filled and bordered">Filled and bordered</option>
             </select>
-          </label>
+          </div>
         </div>
       </div>
 
@@ -1302,13 +1302,13 @@ body.modal-open{overflow:hidden!important;touch-action:none}
             </div>
           </div>
         </div>
-        <label class="field"><span>SVG color mode</span>
-          <select id="bulk-svg-mode">
+        <div class="field"><span>SVG color mode</span>
+          <select aria-label="SVG color mode" id="bulk-svg-mode">
             <option value="keep">Do not change</option>
             <option value="recolor">Recolor with color above</option>
             <option value="preserve">Preserve original SVG colors</option>
           </select>
-        </label>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1593,7 +1593,7 @@ function initColoris(themeMode) {
     themeMode: themeMode || (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'),
     alpha: true,
     format: 'hex',
-    formatToggle: true,
+    formatToggle: false,
     closeButton: true,
     closeLabel: 'Done',
     swatches: [
@@ -2150,8 +2150,8 @@ function mountCardBody(d, f, i) {
         <div class="fields-4">
           <label class="field"><span>Name</span><input ${di} data-k="name" value="${esc(f.name)}"></label>
           <label class="field"><span>ID</span><input ${di} data-k="id" value="${esc(f.id)}" style="font-family:var(--mono)"></label>
-          <label class="field"><span>Group</span><select ${di} data-k="groupId">${gopts(f.groupId)}</select></label>
-          <label class="field"><span>Tag style</span><select ${di} data-k="tagStyle">${sty.map(s => `<option${s === f.tagStyle ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
+          <div class="field"><span>Group</span><select aria-label="Group" ${di} data-k="groupId">${gopts(f.groupId)}</select></div>
+          <div class="field"><span>Tag style</span><select aria-label="Tag style" ${di} data-k="tagStyle">${sty.map(s => `<option${s === f.tagStyle ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select></div>
         </div>
       </div>
       <div class="zone">
@@ -2175,7 +2175,7 @@ function mountCardBody(d, f, i) {
             <span class="preserve-copy"><strong>Keep original SVG colors</strong><small>Ignore recolor &amp; use native palette</small></span>
             <span class="preserve-chip">${f.svgPreserveOriginal ? 'Original' : 'Recolor'}</span>
           </label>
-          <label class="field"><span>Quick preset (this badge)</span><select data-pre="${i}"><option value="">Choose preset…</option>${PO}</select></label>
+          <div class="field"><span>Quick preset (this badge)</span><select aria-label="Quick preset (this badge)" data-pre="${i}"><option value="">Choose preset…</option>${PO}</select></div>
         </div>
       </div>`;
   d.append(body);

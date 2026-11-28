@@ -723,6 +723,7 @@ function getIconMatchCanvasMatrix(node){
 }
 function getIconSizeMatchBounds(layer){
  if(!layer||!isLayerEffectivelyAvailable(layer))return null;
+ if(layer.iconPixelBounds&&layer.iconPixelBoundsKey===fallbackLayerSignature(layer))return {...layer.iconPixelBounds};
  const outer=getLayerNode(layer.id);if(!outer||typeof outer.querySelectorAll!=='function')return null;
  const outerMatrix=getIconMatchCanvasMatrix(outer);if(!outerMatrix||![outerMatrix.a,outerMatrix.b,outerMatrix.c,outerMatrix.d,outerMatrix.e,outerMatrix.f].every(Number.isFinite))return null;
  let result=null;const selector='path,rect,circle,ellipse,line,polyline,polygon,text,image,use';
@@ -775,8 +776,12 @@ function iconMatchContainsUnsupportedEffects(layer){
  if(!layer||layer.visible===false||num(layer.opacity,1)<=0)return false;
  // Clip paths, masks and filters can change the actually visible silhouette;
  // defer these assets instead of pretending their un-clipped path bounds are exact.
- if(layer.shadow)return true;
- if(layer.type==='svg'&&/<(?:clipPath|mask|filter)\b|\b(?:clip-path|mask|filter)\s*=/i.test(String(layer.markup||'')))return true;
+  if(layer.shadow)return true;
+  if(layer.type==='svg'){
+   const markup=String(layer.markup||'');
+   if(/<(?:mask|filter)\b|\b(?:mask|filter)\s*=/i.test(markup))return true;
+   if(/<(?:clipPath)\b|\bclip-path\s*=/i.test(markup)&&!(layer.iconPixelBounds&&layer.iconPixelBoundsKey===fallbackLayerSignature(layer)))return true;
+  }
  return layer.type==='group'&&(layer.children||[]).some(iconMatchContainsUnsupportedEffects);
 }
 function iconSizeMatchIneligibleReason(layer){
@@ -790,7 +795,16 @@ function iconSizeMatchIneligibleReason(layer){
 function isIconSizeMatchLayer(layer){return !!layer&&!iconSizeMatchIneligibleReason(layer);}
 function updateIconSizeMatchControls(){
  const button=$('bcMatchIconSizes'),info=$('bcIconSizeMatchReference');if(!button||!info)return;
- const ref=findLayer(keyObjectId),roots=selectedRoots(),selectedRef=!!ref&&roots.some(layer=>layer.id===ref.id);
+  const ref=findLayer(keyObjectId),roots=selectedRoots();
+   for(const layer of roots){
+     if(layer?.type!=='svg'||!/\bclip-path\s*=/i.test(String(layer.markup||''))||(layer.iconPixelBounds&&layer.iconPixelBoundsKey===fallbackLayerSignature(layer))||layer._pixelBoundsPending)continue;
+    const signature=fallbackLayerSignature(layer);
+    if(layer._pixelBoundsSignature!==signature){layer._pixelBoundsSignature=signature;layer._pixelBoundsAttempts=0;}
+    if(layer._pixelBoundsAttempts>=2)continue;
+    layer._pixelBoundsAttempts++;layer._pixelBoundsPending=true;
+    measureLayerPixelBounds(layer).then(ok=>{layer._pixelBoundsPending=false;if(ok)delete layer._pixelBoundsAttempts;updateIconSizeMatchControls();});
+   }
+  const selectedRef=!!ref&&roots.some(layer=>layer.id===ref.id);
  const refAvailable=!!ref&&isLayerEffectivelyAvailable(ref)&&isIconSizeMatchLayer(ref);
  const eligibleTargets=roots.filter(layer=>layer.id!==keyObjectId&&isLayerEffectivelyAvailable(layer)&&!hasVisibleLockedLayer(layer)&&isIconSizeMatchLayer(layer));
  if(!ref)info.textContent='Choose an icon that must keep its size: select it and click ★ in the layer list.';
@@ -4534,38 +4548,62 @@ function getMarkerExpansion(node,style,strokeWidth){
 }
 function affineMaxScale(m){if(!m)return 1;const tr=m.a*m.a+m.b*m.b+m.c*m.c+m.d*m.d,det=m.a*m.d-m.b*m.c,disc=Math.sqrt(Math.max(0,tr*tr-4*det*det));return Math.sqrt(Math.max(0,(tr+disc)/2));}
 function expandWorldBounds(b,padX,padY=padX){if(!b)return null;return{x:b.x-padX,y:b.y-padY,w:b.w+padX*2,h:b.h+padY*2};}
-let gspStrokeMeasureSvg=null;
-function getStrokeMeasureSvg(){
- if(gspStrokeMeasureSvg?.isConnected)return gspStrokeMeasureSvg;
- const svg=document.createElementNS(NS,'svg');svg.setAttribute('xmlns',NS);svg.setAttribute('width','1');svg.setAttribute('height','1');svg.setAttribute('viewBox','0 0 1 1');svg.style.cssText='position:fixed;left:-100000px;top:-100000px;width:1px;height:1px;overflow:visible;visibility:hidden;pointer-events:none';document.body.append(svg);gspStrokeMeasureSvg=svg;return svg;
-}
 function getSvgMiterTipWorldPoints(item,matrix,strokeWidth,miterLimit,nonScaling=false){
- if(!item||!matrix||!(strokeWidth>0)||!Number.isFinite(miterLimit)||miterLimit<=1||typeof item.getTotalLength!=='function')return[];
+ if(!item||!matrix||!(strokeWidth>0)||!Number.isFinite(miterLimit)||miterLimit<=1)return[];
  const d=item.getAttribute?.('d');if(!d)return[];const chunks=parseSvgSubpathRecords(d);if(!chunks?.length)return[];
- const tips=[],root=getStrokeMeasureSvg(),half=strokeWidth/2;
+ const numRe=/[MLCQAZ]|-?\d*\.?\d+(?:[eE][-+]?\d+)?/g;
+ const unit=(x,y)=>{const l=Math.hypot(x,y);return l>1e-9?{x:x/l,y:y/l}:null;};
+ const arcTangent=(x0,y0,x1,y1,rx,ry,phiDeg,laf,sweep,atEnd)=>{
+  rx=Math.abs(rx);ry=Math.abs(ry);
+  if(rx<1e-9||ry<1e-9)return unit(x1-x0,y1-y0);
+  const phi=phiDeg*Math.PI/180,cp=Math.cos(phi),sp=Math.sin(phi),hx=(x0-x1)/2,hy=(y0-y1)/2;
+  const xp=cp*hx+sp*hy,yp=-sp*hx+cp*hy,lam=xp*xp/(rx*rx)+yp*yp/(ry*ry);
+  if(lam>1){const s=Math.sqrt(lam);rx*=s;ry*=s;}
+  const sgn=(laf!==sweep)?1:-1,num=Math.max(0,rx*rx*ry*ry-rx*rx*yp*yp-ry*ry*xp*xp),den=rx*rx*yp*yp+ry*ry*xp*xp||1,co=sgn*Math.sqrt(num/den);
+  const cxp=co*rx*yp/ry,cyp=co*-ry*xp/rx,cx=cp*cxp-sp*cyp+(x0+x1)/2,cy=sp*cxp+cp*cyp+(y0+y1)/2;
+  const px=atEnd?x1:x0,py=atEnd?y1:y0,qx=cp*(px-cx)+sp*(py-cy),qy=-sp*(px-cx)+cp*(py-cy);
+  let tx=-rx*qy/ry,ty=ry*qx/rx;
+  const wx=cp*tx-sp*ty,wy=sp*tx+cp*ty;
+  return unit(sweep?wx:-wx,sweep?wy:-wy);
+ };
+ const tips=[],half=strokeWidth/2;
  for(const chunk of chunks){
-  const path=document.createElementNS(NS,'path');path.setAttribute('d',chunk.d);root.append(path);
-  let len;try{len=path.getTotalLength();}catch(_){path.remove();continue;}
-  if(!(len>1e-6)){path.remove();continue;}
-  const count=Math.max(64,Math.min(2048,Math.ceil(len*8))),step=len/count,closed=/[zZ]\s*$/.test(chunk.d);
-  const at=distance=>{let p;try{p=path.getPointAtLength(Math.max(0,Math.min(len,distance)));}catch(_){return null;}if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))return null;return nonScaling?transformPoint2D(p.x,p.y,matrix):{x:p.x,y:p.y};};
-  const start=closed?0:1,end=closed?count:count;
-  for(let k=start;k<end;k++){
-   const distance=k*step,prev=at(closed?(distance-step+len)%len:distance-step),cur=at(distance),next=at(closed?(distance+step)%len:distance+step);
-   if(!prev||!cur||!next)continue;
-   let ux=cur.x-prev.x,uy=cur.y-prev.y,vx=next.x-cur.x,vy=next.y-cur.y,ul=Math.hypot(ux,uy),vl=Math.hypot(vx,vy);if(ul<1e-5||vl<1e-5)continue;
-   ux/=ul;uy/=ul;vx/=vl;vy/=vl;const cross=ux*vy-uy*vx,dot=Math.max(-1,Math.min(1,ux*vx+uy*vy)),turn=Math.atan2(cross,dot),absTurn=Math.abs(turn);
-   // Uniform sampling of curves produces small tangent changes; only abrupt
-   // changes are treated as true joins. The threshold avoids mistaking smooth
-   // small-radius Bézier curves for miter corners.
-   if(absTurn<.32||absTurn>Math.PI-.025)continue;
-   const denom=Math.cos(absTurn/2),ratio=1/Math.max(.0001,denom);if(ratio>miterLimit)continue;
-   const sign=cross>0?-1:1,n1={x:-uy*sign,y:ux*sign},n2={x:-vy*sign,y:vx*sign};let bx=n1.x+n2.x,by=n1.y+n2.y,bl=Math.hypot(bx,by);if(bl<1e-6)continue;
-   bx/=bl;by/=bl;const dist=half/Math.max(.0001,denom);tips.push({x:cur.x+bx*dist,y:cur.y+by*dist});
+  const toks=chunk.d.match(numRe)||[],segs=[];let cur=null,start=null,i=0,closed=false,closingIn=null;
+  while(i<toks.length){
+   const t=toks[i];
+   if(!/^[MLCQAZ]$/.test(t)){i++;continue;}
+   i++;
+   if(t==='M'){cur={x:Number(toks[i]),y:Number(toks[i+1])};start={...cur};i+=2;continue;}
+   if(t==='Z'){if(cur&&start){if(Math.hypot(start.x-cur.x,start.y-cur.y)>1e-9){const ts=unit(start.x-cur.x,start.y-cur.y);segs.push({start:{...cur},end:{...start},ts,te:ts});}else if(segs.length)closingIn=segs[segs.length-1].te;cur={...start};}closed=true;continue;}
+   if(!cur)break;
+   const p0={...cur};let p,ts,te;
+   if(t==='L'){p={x:Number(toks[i]),y:Number(toks[i+1])};i+=2;ts=unit(p.x-p0.x,p.y-p0.y);te=ts;}
+   else if(t==='C'){const c1={x:Number(toks[i]),y:Number(toks[i+1])},c2={x:Number(toks[i+2]),y:Number(toks[i+3])};p={x:Number(toks[i+4]),y:Number(toks[i+5])};i+=6;ts=unit(c1.x-p0.x,c1.y-p0.y);te=unit(p.x-c2.x,p.y-c2.y);}
+   else if(t==='Q'){const c={x:Number(toks[i]),y:Number(toks[i+1])};p={x:Number(toks[i+2]),y:Number(toks[i+3])};i+=4;ts=unit(c.x-p0.x,c.y-p0.y);te=unit(p.x-c.x,p.y-c.y);}
+   else if(t==='A'){const rx=Number(toks[i]),ry=Number(toks[i+1]),phi=Number(toks[i+2]),laf=Number(toks[i+3]),sweep=Number(toks[i+4]);p={x:Number(toks[i+5]),y:Number(toks[i+6])};i+=7;ts=arcTangent(p0.x,p0.y,p.x,p.y,rx,ry,phi,laf,sweep,false);te=arcTangent(p0.x,p0.y,p.x,p.y,rx,ry,phi,laf,sweep,true);}
+   else break;
+   if(p)segs.push({start:p0,end:p,ts,te});
+   cur=p;
   }
-  path.remove();
- }
- return nonScaling?tips:tips.map(p=>transformPoint2D(p.x,p.y,matrix));
+   const joint=(v,inv,outv)=>{
+    if(!inv||!outv)return;
+    let cv=v,a=inv,b=outv;
+    if(nonScaling){
+     cv=transformPoint2D(v.x,v.y,matrix);
+     a=unit(matrix.a*inv.x+matrix.c*inv.y,matrix.b*inv.x+matrix.d*inv.y);
+     b=unit(matrix.a*outv.x+matrix.c*outv.y,matrix.b*outv.x+matrix.d*outv.y);
+     if(!a||!b)return;
+    }
+    const cross=a.x*b.y-a.y*b.x,dot=Math.max(-1,Math.min(1,a.x*b.x+a.y*b.y)),absTurn=Math.abs(Math.atan2(cross,dot));
+    if(absTurn<.32||absTurn>Math.PI-.025)return;
+    const denom=Math.cos(absTurn/2);if(1/Math.max(.0001,denom)>miterLimit)return;
+    const sign=cross>0?-1:1,n1={x:-a.y*sign,y:a.x*sign},n2={x:-b.y*sign,y:b.x*sign};let bx=n1.x+n2.x,by=n1.y+n2.y,bl=Math.hypot(bx,by);if(bl<1e-6)return;
+    bx/=bl;by/=bl;const dist=half/Math.max(.0001,denom);tips.push({x:cv.x+bx*dist,y:cv.y+by*dist});
+   };
+  for(let j=1;j<segs.length;j++)joint(segs[j-1].end,segs[j-1].te,segs[j].ts);
+   if(closed&&segs.length>1)joint(segs[segs.length-1].end,closingIn||segs[segs.length-1].te,segs[0].ts);
+  }
+  return nonScaling?tips:tips.map(p=>transformPoint2D(p.x,p.y,matrix));
 }
 function strokeVisualBounds(item,box,m,style){
  const normalizedBox=box?{x:Number(box.x),y:Number(box.y),width:Number(box.width??box.w),height:Number(box.height??box.h)}:null;
@@ -4582,7 +4620,51 @@ function strokeVisualBounds(item,box,m,style){
  }else if(markerPad)out=transformedRectBounds(box,m,markerPad);
  return out;
 }
+const svgWorldBoundsCache=new WeakMap(),svgStrokePadCache=new WeakMap();
+function fallbackLayerSignature(layer){
+ if(!layer)return '';
+ return JSON.stringify([layer.x,layer.y,layer.rotate,layer.scaleX,layer.scaleY,layer.w,layer.h,layer.viewX,layer.viewY,layer.viewW,layer.viewH,layer.preserveAspectRatio,layer.rootAttrs,layer.markup,layer.opacity,layer.visible]);
+}
+async function measureLayerPixelBounds(layer){
+ if(!layer||layer.type!=='svg')return false;
+ const markup=String(layer.markup||'');
+ if(!/\bclip-path\s*=/i.test(markup))return true;
+ if(/<(?:mask|filter)\b|\b(?:mask|filter)\s*=/i.test(markup)||layer.shadow)return false;
+ const key=fallbackLayerSignature(layer);
+ if(layer.iconPixelBoundsKey===key)return true;
+ const stage=$('bcStage');if(!stage||!getLayerNode(layer.id))return false;
+ const view={x:num(layer.x),y:num(layer.y),w:Math.max(1,num(layer.w)),h:Math.max(1,num(layer.h))};
+ const maxSide=Math.max(view.w,view.h),area=Math.max(1,view.w*view.h);
+ const scale=Math.min(160,1400/maxSide,Math.sqrt(500000/area));if(!(scale>0))return false;
+ const width=Math.max(32,Math.ceil(view.w*scale)),height=Math.max(32,Math.ceil(view.h*scale));if(width*height>520000)return false;
+ const clone=stage.cloneNode(true);clone.setAttribute('xmlns',NS);clone.removeAttribute('style');
+ clone.querySelectorAll('.bc-selected-outline,.bc-handle,.bc-transform-handle,.bc-transform-line,.bc-path-overlay,.inspector-canvas,[data-gsp-overlay],[data-gsp-guide],[data-gsp-typography-guides]').forEach(n=>n.remove());
+ const modelIds=new Set(allLayers().map(item=>item.id));
+ for(const node of clone.querySelectorAll('[data-layer-id]')){const id=node.getAttribute('data-layer-id');if(modelIds.has(id)&&id!==layer.id){node.setAttribute('display','none');node.style.setProperty('display','none','important');}}
+ clone.setAttribute('width',String(width));clone.setAttribute('height',String(height));clone.setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);clone.setAttribute('preserveAspectRatio','none');clone.style.overflow='visible';
+ const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)],{type:'image/svg+xml;charset=utf-8'}));
+ try{
+  const image=new Image();image.decoding='async';
+  await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error('pixel bounds unavailable'));image.src=url;});
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)return false;
+  ctx.clearRect(0,0,width,height);ctx.drawImage(image,0,0,width,height);
+  const data=ctx.getImageData(0,0,width,height).data;let minX=width,minY=height,maxX=-1,maxY=-1;
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(data[(y*width+x)*4+3]>12){if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}
+  if(maxX<0)return false;
+  layer.iconPixelBounds={x:view.x+minX/width*view.w,y:view.y+minY/height*view.h,w:(maxX-minX+1)/width*view.w,h:(maxY-minY+1)/height*view.h};
+  layer.iconPixelBoundsKey=key;return true;
+ }catch(_){return false;}finally{URL.revokeObjectURL(url);}
+}
 function getLayerStrokeExpansionWorld(layer,direction=null){
+ if(layer?.svgImportFallback&&!direction){
+  const key=fallbackLayerSignature(layer),cached=svgStrokePadCache.get(layer);
+  if(cached?.key===key)return cached.value;
+  const value=computeLayerStrokeExpansionWorld(layer,direction);
+  svgStrokePadCache.set(layer,{key,value});return value;
+ }
+ return computeLayerStrokeExpansionWorld(layer,direction);
+}
+function computeLayerStrokeExpansionWorld(layer,direction=null){
  const outer=getLayerNode(layer?.id);if(!outer)return 0;
  const drawable='path,rect,circle,ellipse,polygon,polyline,line,text,use',nodes=[...(outer.matches?.(drawable)?[outer]:[]),...outer.querySelectorAll(drawable)];let maxPad=0;
  const dir=direction&&Number.isFinite(direction.x)&&Number.isFinite(direction.y)?(()=>{const len=Math.hypot(direction.x,direction.y);return len>1e-8?{x:direction.x/len,y:direction.y/len}:null;})():null;
@@ -4650,6 +4732,15 @@ function getElementEffectivePainted(item,stopNode){
  return true;
 }
 function getLayerWorldBounds(layer,referenceNode=null){
+ if(layer?.svgImportFallback&&!referenceNode){
+  const key=fallbackLayerSignature(layer),cached=svgWorldBoundsCache.get(layer);
+  if(cached?.key===key)return cached.value;
+  const value=computeLayerWorldBounds(layer,referenceNode);
+  svgWorldBoundsCache.set(layer,{key,value});return value;
+ }
+ return computeLayerWorldBounds(layer,referenceNode);
+}
+function computeLayerWorldBounds(layer,referenceNode=null){
  const node=getLayerNode(layer.id);if(node&&typeof node.getBBox==='function'){
   let result=null;const refMatrix=referenceNode?getIconMatchCanvasMatrix(referenceNode):null,refInverse=referenceNode?(refMatrix&&invertAffineMatrix(refMatrix)):null;
   if(referenceNode&&!refInverse)return visualBounds(layer);
@@ -5978,7 +6069,7 @@ async function importSvgSources(items,options={}){
     notes.push(`${name}: retained as one complete SVG because ${forcePreserve&&preserveReason?preserveReason:svgWholeDocumentFallbackReason(v)}. The original SVG context and rendering are kept intact.`);
   }
  }catch(err){errors.push(`${String(item?.name||item?.file?.name||'SVG')}: ${err?.message||String(err)}`);}}
- if(imported.length){snap();pathEditId=null;if(!layers.length&&firstSize){W=firstSize.w;H=firstSize.h;}layers.push(...imported);selectedId=imported[imported.length-1].id;selectedIds=new Set([selectedId]);render();fitStage();}
+  if(imported.length){snap();pathEditId=null;if(!layers.length&&firstSize){W=firstSize.w;H=firstSize.h;}layers.push(...imported);selectedId=imported[imported.length-1].id;selectedIds=new Set([selectedId]);render();fitStage();for(const importedLayer of imported)if(importedLayer.type==='svg'&&/\bclip-path\s*=/i.test(String(importedLayer.markup||'')))await measureLayerPixelBounds(importedLayer);}
  const componentCount=countEditableComponents(imported),fileCount=items.length,layerWord=componentCount===1?'editable component':'editable components';
  let message=`Imported ${fileCount} SVG file${fileCount===1?'':'s'} with ${componentCount} ${layerWord}.`;
  if(retainedWhole)message+=` ${retainedWhole} file${retainedWhole===1?' was':'s were'} kept as a complete SVG object because the entire composition could not be split safely.`;
